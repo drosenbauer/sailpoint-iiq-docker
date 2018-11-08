@@ -1,0 +1,72 @@
+version: '2.3'
+services:
+  ssh:
+    build: ./ssh-host
+    image: ssh-host
+    labels:
+      - traefik.enable=false
+
+  ldap:
+    image: osixia/openldap:1.2.2
+    environment:
+      - LDAP_DOMAIN=sailpoint.demo
+      - LDAP_ORGANISATION=Sailpoint Demo
+      - LDAP_ADMIN_PASSWORD=spadmin
+    labels: 
+      - traefik.enable=false
+
+  db:
+    image: "mysql:${MYSQL_VERSION:-5.7}"
+    environment:
+      - MYSQL_USER=identityiq
+      - MYSQL_PASSWORD=identityiq
+      - MYSQL_DATABASE=identityiq
+      - MYSQL_ROOT_PASSWORD=password
+    labels: 
+      - traefik.enable=false
+
+  mail:
+    image: mailhog/mailhog
+    expose:
+      - "1025"
+    ports:
+      - "${MAILHOG_HTTP_PORT:-8025}:8025"
+    labels:
+      - traefik.enable=false
+
+  lb2:
+    image: traefik
+    command: --api --docker --web --logLevel=DEBUG
+    ports:
+      - "${LISTEN_PORT:-8080}:80"      # The HTTP port
+      - "28080:8080"  # The Web UI (enabled by --api)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
+    labels:
+      - traefik.enable=false
+
+  iiq-master:
+    build: ./iiq-build
+    image: sailpoint-iiq
+    environment:
+      - MYSQL_USER=identityiq
+      - MYSQL_PASSWORD=identityiq
+      - MYSQL_DATABASE=identityiq
+      - MYSQL_ROOT_PASSWORD=password
+      - IIQ_VERSION=7.2
+      - IIQ_PATCH=${IIQ_PATCH}
+      - SKIP_DEMO_COMPANY_DATA=${SKIP_DEMO_COMPANY_DATA}
+    depends_on:
+      - db
+      - mail
+      - ldap
+    volumes:
+      - "${IIQ_WAR}:/opt/iiq/identityiq.war:cached"
+      - "${IIQ_IMPORTS}:/opt/iiq/imports/:cached"
+      - "${IIQ_AUTO_IMPORTS}:/opt/iiq/auto-import-list:cached"
+    labels:
+        - traefik.backend=iiq
+        - traefik.port=8080
+        - traefik.docker.network=frontend
+        - "traefik.frontend.rule=PathPrefix:/identityiq"
+        - "traefik.backend.loadbalancer.sticky=true"
