@@ -109,7 +109,7 @@ The `employee_number` field is intended as the unique ID.
 
 # Fake SSNs
 
-The dataset includes an `ssn` field with SSN-formatted randomly generated values. This field is intended for demonstrating or practicing PII management.
+The dataset includes an `ssn` field with SSN-formatted randomly generated values. These values begin with 9xx so are not valid SSNs. This field is intended for demonstrating or practicing PII management.
 
 # Additional datasets
 
