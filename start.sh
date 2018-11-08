@@ -208,7 +208,8 @@ cat .env | sed 's/^/  /'
 
 if [[ -z ${NOSTART} ]]; then
 	greenecho " => Starting Docker..."
-	docker-compose -p iiq up -d
+	docker-compose -p iiq -f "${COMPOSE}" up -d
+	echo ${COMPOSE} > ${BUILD}/.composefile
 fi
 
 echo 

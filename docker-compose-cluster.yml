@@ -55,12 +55,17 @@ services:
       - MYSQL_PASSWORD=identityiq
       - MYSQL_DATABASE=identityiq
       - MYSQL_ROOT_PASSWORD=password
+      - IIQ_VERSION=7.2
+      - IIQ_PATCH=${IIQ_PATCH}
+      - SKIP_DEMO_COMPANY_DATA=${SKIP_DEMO_COMPANY_DATA}
     depends_on:
       - db
       - mail
       - ldap
     volumes:
-      - "${IIQ_SSB_FOLDER:-/tmp/.ssb}:/opt/ssb:cached"
+      - "${IIQ_WAR}:/opt/iiq/identityiq.war:cached"
+      - "${IIQ_IMPORTS}:/opt/iiq/imports/:cached"
+      - "${IIQ_AUTO_IMPORTS}:/opt/iiq/auto-import-list:cached"
     labels:
         - traefik.backend=iiq
         - traefik.port=8080
@@ -71,7 +76,7 @@ services:
   iiq-secondary:
     build: ./iiq-build
     # Change this a non-zero value if you want secondary instances!
-    scale: 0
+    scale: 1
     image: sailpoint-iiq
     environment:
       - MYSQL_USER=identityiq
@@ -80,13 +85,17 @@ services:
       - MYSQL_ROOT_PASSWORD=password
       - SECONDARY=y
       - IIQ_MASTER_NAME=iiq-master
+      - IIQ_PATCH=${IIQ_PATCH}
+      - SKIP_DEMO_COMPANY_DATA=${SKIP_DEMO_COMPANY_DATA}
     depends_on:
       - db
       - mail
       - ldap
       - iiq-master
     volumes:
-      - "${IIQ_SSB_FOLDER:-/tmp/.ssb}:/opt/ssb:cached"
+      - "${IIQ_WAR}:/opt/iiq/identityiq.war:cached"
+      - "${IIQ_IMPORTS}:/opt/iiq/imports/:cached"
+      - "${IIQ_AUTO_IMPORTS}:/opt/iiq/auto-import-list:cached"
     labels:
         - traefik.backend=iiq
         - traefik.port=8080
