@@ -22,9 +22,40 @@ You must provide the location of an IdentityIQ WAR using one of three flags:
 
 In whatever method you specify (apart from a local SSB), an `identityiq.war` will eventually be copied to the `build` subfolder for staging and then mounted into the running Docker container.
 
+If you want to start a cluster with a primary and a secondary node, use the `start-cluster.sh` script instead. All other parameters are the same. The other scripts will remember which you used to provide appropriate output.
+
+## Example startup output
+
+    host:pub-sailpoint-docker devin$ ./start-cluster.sh -z identityiq-7.3.zip
+     => Creating and cleaning build directory
+     => Build directory is /Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build
+     => Dump configuration
+       Compose file: docker-compose-cluster.yml
+     => No SSB; extracting WAR from identityiq ZIP file
+     => Creating .env file for Docker
+      SPTARGET=
+      IIQ_WAR=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/identityiq.war
+      LISTEN_PORT=8080
+      SSB=
+      IIQ_PATCH=
+      SKIP_DEMO_COMPANY_DATA=
+      IIQ_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/imports
+      IIQ_AUTO_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/import-list
+     => Starting Docker...
+    Creating network "iiq_default" with the default driver
+    Creating iiq_lb2_1  ... done
+    Creating iiq_ldap_1 ... done
+    Creating iiq_ssh_1  ... done
+    Creating iiq_db_1   ... done
+    Creating iiq_mail_1 ... done
+    Creating iiq_iiq-master_1 ... done
+    Creating iiq_iiq-secondary_1 ... done
+
 ## Containers
 
 The containers will be started in `-d` (daemon) mode, which runs them in the background.
+
+You can use the `status.sh` script to check the status of the running environment.
 
 It will take 2-3 minutes for IIQ to become available once `start.sh` completes. You'll be able to access your IIQ installation at `http://localhost:8080` with the usual default username and password.
 
@@ -47,6 +78,12 @@ Additionally, you will be able to use the `seri.sh` script to push in any SERI c
 ## Output
 
 To follow the logs, a `tail.sh` script has been provided.
+
+## Entering the shell
+
+You can enter the shell of any of the running containers using the provided `enter-shell.sh` script. 
+
+By default, with no parameters, you will enter the primary iiq-master container. You can specify a WHICH environment variable to enter another. For example: `WHICH=iiq-secondary ./enter-shell.sh`
 
 ## Stopping
 
@@ -83,6 +120,13 @@ This Docker Compose file will start up six services in six containers:
 These should be sufficient to demonstrate most of the non-proprietary connectors in IIQ. The service names double as the hostnames from within the containers, so IIQ sees the database host as having DNS name `db`, LDAP as having the DNS name `ldap`, etc. 
 
 Default usernames and passwords are available in the `docker-compose.yml` file.
+
+Load balancer
+=============
+
+The load balancer [Traefik](https://traefik.io/) is used to forward traffic to one or more backend IIQ hosts. It is granted access to the Docker socket which essentially gives it "root" access to your Docker environment. It will monitor containers as they start and forward traffic among them automatically. It is configured for sticky sessions by default, as IIQ requires.
+
+Once the stack is started, you can access the Traefik dashboard at `http://localhost:28080`.
 
 Procedurally generated HR Data
 ==============================
