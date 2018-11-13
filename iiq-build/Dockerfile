@@ -53,6 +53,10 @@ RUN mkdir -p /var/run/sshd /var/log/supervisor
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+COPY healthcheck.sh /opt/healthcheck.sh
+RUN chmod +x /opt/healthcheck.sh
+HEALTHCHECK --start-period=120s --timeout=10s --interval=10s --retries=10 CMD /opt/healthcheck.sh
+
 # Launch IIQ
 CMD ["/usr/bin/supervisord"]
 
