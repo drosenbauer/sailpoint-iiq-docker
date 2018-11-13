@@ -1,8 +1,3 @@
-Acknowledgement
-===============
-
-This codebase is inspired by and partially derived from the sailpoint-iiq Docker project by [Steffen Sperling](https://community.sailpoint.com/people/ssperling): https://github.com/steffensperling/sailpoint-iiq
-
 Usage
 =====
 
@@ -67,13 +62,7 @@ Pulling an entire SSB build from Git can take forever. The script tracks the mos
 
 ## Automatically importing (apart from SSB)
 
-Anything placed into the `./build/imports/` directory will be copied to IIQ's `config` directory, retaining folder structure. If you want to automatically import anything, you can list it in a text file, `./build/import-list`, one item per line. Both the folder and file will be created by `start.sh` on first run, as they must be mounted into Docker.
-
-## SERI
-
-If a folder called `config/seri` is detected by the startup script, the SERI init objects will be imported automatically. 
-
-Additionally, you will be able to use the `seri.sh` script to push in any SERI component. If the component is in the folder `config/seri/catalog/UseCase-XYZ`, you would specify `UseCase-XYZ` as the parameter to `seri.sh`. The `setup.xml` file in that folder will be imported. If the folder you specify begins with *Plugin*, the contents will be imported as one or more plugins instead.
+Anything placed into the `./build/imports/` directory will be copied to IIQ's `config` directory, retaining folder structure. If you want to automatically import anything, you can list it in a text file, `./build/import-list`, one item per line. Both the folder and file will be created by `start.sh` on first run if they are missing, as they must be mounted into Docker.
 
 ## Output
 
@@ -128,6 +117,13 @@ The load balancer [Traefik](https://traefik.io/) is used to forward traffic to o
 
 Once the stack is started, you can access the Traefik dashboard at `http://localhost:28080`.
 
+SERI
+====
+
+If a folder called `config/seri` is detected by the startup script, the SERI init objects will be imported automatically. 
+
+Additionally, you will be able to use the `seri.sh` script to more easily push in any SERI component after IIQ is started. If the component is in the folder `config/seri/catalog/UseCase-XYZ`, you would specify `UseCase-XYZ` as the parameter to `seri.sh`. The `setup.xml` file in that folder will be imported. If the folder you specify begins with *Plugin*, the contents will be imported as one or more plugins instead.
+
 Procedurally generated HR Data
 ==============================
 
@@ -160,3 +156,8 @@ The dataset includes an `ssn` field with SSN-formatted randomly generated values
 Additional larger or smaller ramdomly generated user sets are available on request. 
 
 We also have generated university datasets with users having multiple valid affiliations.
+
+Acknowledgement
+===============
+
+This codebase is inspired by and partially derived from the sailpoint-iiq Docker project by [Steffen Sperling](https://community.sailpoint.com/people/ssperling): https://github.com/steffensperling/sailpoint-iiq
