@@ -119,6 +119,9 @@ then
 	if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/config/seri ]]; then
 		echo "import seri/init-seri.xml" | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console
 	fi
+        if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/config/init-acceleratorpack.xml ]]; then
+                echo "import init-acceleratorpack.xml" | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console
+        fi
 	if [[ -e /opt/iiq/imports ]]; then
 		pushd /opt/iiq/imports
 		for file in `ls`; do
