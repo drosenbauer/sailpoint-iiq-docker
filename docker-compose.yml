@@ -8,6 +8,8 @@ services:
 
   ldap:
     image: osixia/openldap:1.2.2
+    ports: 
+      - 1389:389
     environment:
       - LDAP_DOMAIN=sailpoint.demo
       - LDAP_ORGANISATION=Sailpoint Demo

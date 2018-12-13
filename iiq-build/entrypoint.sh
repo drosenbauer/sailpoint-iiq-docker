@@ -104,6 +104,9 @@ then
 			mysql -uroot -p${MYSQL_ROOT_PASSWORD} -hdb < $upgrade
 		done
 	fi
+	
+	echo "=> Importing demo LDAP objects"
+	ldapmodify -h ldap -D "cn=admin,dc=sailpoint,dc=demo" -w spadmin -f /bootstrap.ldif
 else
 	echo "=> Database already set up, version "$DB_SCHEMA_VERSION" found, starting IIQ directly";
 fi
