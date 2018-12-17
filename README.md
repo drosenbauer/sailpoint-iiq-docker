@@ -157,6 +157,13 @@ Additional larger or smaller ramdomly generated user sets are available on reque
 
 We also have generated university datasets with users having multiple valid affiliations.
 
+Issues
+======
+
+If you don't use the start.sh script, you will receive the following error on startup. Follow the instructions above. Run `docker-compose build` and then `start.sh` with appropriate parameters.
+
+    ERROR: for sailpoint-docker_iiq-master_1  Cannot create container for service iiq-master: create .: volume name is too short, names should be at least two alphanumeric characters
+
 Acknowledgement
 ===============
 
