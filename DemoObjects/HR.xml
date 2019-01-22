@@ -1,0 +1,253 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<sailpoint>
+<CorrelationConfig name="HR Matcher">
+  <AttributeAssignments>
+    <Filter operation="EQ" property="name" value="employee_number"/>
+  </AttributeAssignments>
+</CorrelationConfig>
+<Application authoritative="true" connector="sailpoint.connector.JDBCConnector" created="1544219263904" featuresString="DISCOVER_SCHEMA, PROVISIONING, SYNC_PROVISIONING, DIRECT_PERMISSIONS, SEARCH, ENABLE, UNLOCK" icon="databaseIcon" name="HR" type="JDBC">
+  <AccountCorrelationConfig>
+    <Reference class="sailpoint.object.CorrelationConfig" name="HR Matcher"/>
+  </AccountCorrelationConfig>
+  <Attributes>
+    <Map>
+      <entry key="SQL" value="select * from hr.hr_people;"/>
+      <entry key="acctAggregationEnd">
+        <value>
+          <Date>1544652921411</Date>
+        </value>
+      </entry>
+      <entry key="afterProvisioningRule"/>
+      <entry key="aggregationMode">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="beforeProvisioningRule"/>
+      <entry key="compositeDefinition"/>
+      <entry key="deltaTable"/>
+      <entry key="driverClass" value="com.mysql.jdbc.Driver"/>
+      <entry key="getDeltaSQL"/>
+      <entry key="getObjectSQL" value="select * from hr.hr_people where employee_number = &apos;$(identity)&apos;"/>
+      <entry key="isPermissionEnabled">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="mergeRows">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="nativeChangeDetectionAttributeScope" value="entitlements"/>
+      <entry key="nativeChangeDetectionAttributes"/>
+      <entry key="nativeChangeDetectionEnabled">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="nativeChangeDetectionOperations"/>
+      <entry key="partitionMode">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="partitionStatements"/>
+      <entry key="password" value="identityiq"/>
+      <entry key="provisionRule" value="globalRule"/>
+      <entry key="sysDescriptions">
+        <value>
+          <Map>
+            <entry key="en_US"/>
+          </Map>
+        </value>
+      </entry>
+      <entry key="templateApplication" value="JDBC Template"/>
+      <entry key="testConnSQL"/>
+      <entry key="url" value="jdbc:mysql://db/hr"/>
+      <entry key="useExecuteQuery">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="useStoredProcedureDelta">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="useStoredProcedureDirectPermission">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="useStoredProcedureGetObject">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="useStoredProcedurePartition">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="useStoredProcedureSqlStmt">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="useStoredProcedureTestConn">
+        <value>
+          <Boolean></Boolean>
+        </value>
+      </entry>
+      <entry key="user" value="identityiq"/>
+    </Map>
+  </Attributes>
+  <Owner>
+    <Reference class="sailpoint.object.Identity" name="spadmin"/>
+  </Owner>
+  <Schemas>
+    <Schema displayAttribute="employee_number" identityAttribute="employee_number" instanceAttribute="" nativeObjectType="account" objectType="account">
+      <AttributeDefinition name="first_name" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="middle_initial" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="last_name" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="preferred_first_name" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="email" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="full_part_time" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="employee_number" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="manager_number" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="location_name" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="office_address" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="office_address2" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="office_city" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="office_state" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="office_zip" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="office_country" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="home_address" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="home_city" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="home_state" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="home_zip" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="home_country" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="office_phone" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="home_phone" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="department" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="department_code" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="job_title" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="job_title_code" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="status" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="contingent_worker" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="company" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="ssn" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="start_date" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="end_date" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+      <AttributeDefinition name="original_hire_date" type="string">
+        <Description></Description>
+      </AttributeDefinition>
+    </Schema>
+  </Schemas>
+
+</Application>
+
+<TaskDefinition formPath="/monitor/tasks/accountAggregationTask.xhtml" name="HR Aggregation Task" resultAction="Delete" subType="task_item_type_acct_aggregation" type="AccountAggregation">
+  <Attributes>
+    <Map>
+      <entry key="TaskSchedule.host"/>
+      <entry key="applications" value="HR"/>
+      <entry key="checkDeleted" value="false"/>
+      <entry key="checkHistory" value="false"/>
+      <entry key="checkPolicies" value="false"/>
+      <entry key="correlateEntitlements" value="false"/>
+      <entry key="correlateOnly" value="false"/>
+      <entry key="correlateScope" value="false"/>
+      <entry key="deltaAggregation" value="false"/>
+      <entry key="enablePartitioning" value="true"/>
+      <entry key="haltOnMaxError" value="false"/>
+      <entry key="noAutoCreateApplications" value="false"/>
+      <entry key="noAutoCreateScopes" value="false"/>
+      <entry key="noNeedsRefresh" value="false"/>
+      <entry key="noOptimizeReaggregation" value="false"/>
+      <entry key="promoteManagedAttributes" value="false"/>
+      <entry key="refreshCertifications" value="false"/>
+      <entry key="refreshScorecard" value="false"/>
+      <entry key="sequential" value="false"/>
+      <entry key="taskCompletionEmailNotify" value="Disabled"/>
+      <entry key="taskCompletionEmailRecipients"/>
+      <entry key="taskCompletionEmailTemplate"/>
+    </Map>
+  </Attributes>
+  <Description>Task template for application account scanning.</Description>
+  <Owner>
+    <Reference class="sailpoint.object.Identity" name="spadmin"/>
+  </Owner>
+  <Parent>
+    <Reference class="sailpoint.object.TaskDefinition" name="Account Aggregation"/>
+  </Parent>
+</TaskDefinition>
+
+
+</sailpoint>

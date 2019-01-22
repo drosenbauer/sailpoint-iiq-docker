@@ -104,6 +104,9 @@ then
 			mysql -uroot -p${MYSQL_ROOT_PASSWORD} -hdb < $upgrade
 		done
 	fi
+	
+	echo "=> Importing demo LDAP objects"
+	ldapmodify -h ldap -D "cn=admin,dc=sailpoint,dc=demo" -w spadmin -f /bootstrap.ldif
 else
 	echo "=> Database already set up, version "$DB_SCHEMA_VERSION" found, starting IIQ directly";
 fi
@@ -119,6 +122,9 @@ then
 	if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/config/seri ]]; then
 		echo "import seri/init-seri.xml" | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console
 	fi
+        if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/config/init-acceleratorpack.xml ]]; then
+                echo "import init-acceleratorpack.xml" | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console
+        fi
 	if [[ -e /opt/iiq/imports ]]; then
 		pushd /opt/iiq/imports
 		for file in `ls`; do
