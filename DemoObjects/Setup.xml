@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<sailpoint>
+<RequestDefinition executor="sailpoint.request.AggregationRequestExecutor" name="Aggregate Partition" retryMax="20">
+  <Attributes>
+    <Map>
+      <entry key="maxThreads" value="10"/>
+    </Map>
+  </Attributes>
+</RequestDefinition>
+</sailpoint>

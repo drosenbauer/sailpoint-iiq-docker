@@ -191,6 +191,11 @@ if [[ ! -e "${BUILD}/imports" ]]; then
 	mkdir -p "${BUILD}/imports"
 fi
 
+if [[ ! -e "${BUILD}/ldap" ]]; then
+	mkdir -p "${BUILD}/ldap"
+	cp bootstrap.ldif "${BUILD}/ldap"
+fi
+
 IMPORTS_DIR=`realname build/imports`
 IMPORTS_FILE=`realname build/import-list`
 
