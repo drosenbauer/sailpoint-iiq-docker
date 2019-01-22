@@ -19,6 +19,16 @@ In whatever method you specify (apart from a local SSB), an `identityiq.war` wil
 
 If you want to start a cluster with a primary and a secondary node, use the `start-cluster.sh` script instead. All other parameters are the same. The other scripts will remember which you used to provide appropriate output.
 
+## A note on Docker Swarm
+
+This repository is a *single node Docker Compose deployment only*. It does not and is not intended to support Docker Swarm multi-node clusters.
+
+Here's why: The `sailpoint-iiq` image created by this Compose configuration is intended to be lightweight, allowing you to mount whatever IIQ components you need at runtime via Docker volumes. This allows the `start.sh` script to do a lot of the setup work via automatic builds and environment variables, which makes the whole experience much more dynamic. There's no need to rebuild and push the entire image after each SSB change.
+
+Without special plugins, you can't mount Docker volumes across cluster nodes. A Swarm deployment would thus require that a heavyweight IIQ container be pushed to a registry with all IIQ components already in the image. It also seems unwise to assume that your Docker Swarm setup has the plugins I'm expecting.
+
+That said, I do *have* a working Swarm deployment of IIQ and may add support for this in future updates, likely in a separate branch.
+
 ## Example startup output
 
     host:pub-sailpoint-docker devin$ ./start-cluster.sh -z identityiq-7.3.zip
@@ -103,8 +113,8 @@ This Docker Compose file will start up six services in six containers:
 * mail: MailHog
 * ldap: OpenLDAP
 * ssh: An SSH server
-* lb: An HAProxy load balancer with sticky sessions based on JSESSIONID
-* iiq1: IdentityIQ primary node
+* lb2: A load balancer based on Traefik
+* iiq-master: IdentityIQ primary node
 
 These should be sufficient to demonstrate most of the non-proprietary connectors in IIQ. The service names double as the hostnames from within the containers, so IIQ sees the database host as having DNS name `db`, LDAP as having the DNS name `ldap`, etc. 
 
@@ -123,6 +133,11 @@ SERI
 If a folder called `config/seri` is detected by the startup script, the SERI init objects will be imported automatically. 
 
 Additionally, you will be able to use the `seri.sh` script to more easily push in any SERI component after IIQ is started. If the component is in the folder `config/seri/catalog/UseCase-XYZ`, you would specify `UseCase-XYZ` as the parameter to `seri.sh`. The `setup.xml` file in that folder will be imported. If the folder you specify begins with *Plugin*, the contents will be imported as one or more plugins instead.
+
+Accelerator Pack
+================
+
+If the IIQ Accelerator Pack is detected via the XML file `init-acceleratorpack.xml`, it will be automatically imported.
 
 Procedurally generated HR Data
 ==============================
