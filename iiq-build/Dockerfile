@@ -4,7 +4,7 @@ MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
 
 # Based on an original Dockerfile by Steffan Sperling, but modified beyond recognition!
 
-ENV TOMCAT_VERSION 8.5.35
+ENV TOMCAT_VERSION 8.5.36
 
 # Fix sh
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
