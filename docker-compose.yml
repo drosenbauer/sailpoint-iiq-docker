@@ -1,5 +1,24 @@
 version: '2.3'
+volumes:
+  adtmp:
+  adstore:
+
 services:
+  corp.ad.sailpoint.demo:
+    image: nowsci/samba-domain
+    environment:
+      - DOMAIN=corp.ad.sailpoint.demo
+      - DOMAINPASS=S4ilp0int
+      - INSECURELDAP=true
+      - NOCOMPLEXITY=true
+    volumes:
+       - adtmp:/etc/samba/external
+       - adstore:/var/lib/samba
+#    volumes:
+#      - /etc/localtime:/etc/localtime:ro
+    labels:
+      - traefik.enable=false
+
   ssh:
     build: ./ssh-host
     image: ssh-host
