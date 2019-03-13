@@ -1,10 +1,8 @@
-FROM ubuntu:bionic
+FROM tomcat:8.5
 
 MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
 
 # Based on an original Dockerfile by Steffan Sperling, but modified beyond recognition!
-
-ENV TOMCAT_VERSION 8.5.38
 
 # Fix sh
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
@@ -13,14 +11,8 @@ RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 RUN apt-get update && \
 apt-get install -y apt-utils wget unzip tar mysql-client netcat curl openssh-server openssh-client supervisor openjdk-8-jdk nano less ldap-utils
 
-# Get Tomcat
-RUN wget --quiet --no-cookies http://www-eu.apache.org/dist/tomcat/tomcat-8/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz -O /tmp/tomcat.tgz && \
-tar xzvf /tmp/tomcat.tgz -C /opt && \
-mv /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat && \
-rm /tmp/tomcat.tgz && \
-rm -rf /opt/tomcat/webapps/examples && \
-rm -rf /opt/tomcat/webapps/docs && \
-rm -rf /opt/tomcat/webapps/ROOT
+# Move the default image location to the one this is expecting
+RUN mv /usr/local/tomcat /opt/tomcat
 
 # Add admin/admin user
 ADD tomcat-users.xml /opt/tomcat/conf/
@@ -34,13 +26,14 @@ COPY sql/target.sql /opt/sql/
 
 VOLUME "/opt/iiq"
 
-RUN mkdir /opt/tomcat/webapps/ROOT
+RUN mkdir -p /opt/tomcat/webapps/ROOT
 COPY index.html /opt/tomcat/webapps/ROOT
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENV CATALINA_HOME /opt/tomcat
+ENV CATALINA_BASE /opt/tomcat
 ENV PATH $PATH:$CATALINA_HOME/bin
 
 EXPOSE 22 8009 8080
@@ -61,8 +54,3 @@ COPY src/bootstrap.ldif /bootstrap.ldif
 
 # Launch IIQ
 CMD ["/usr/bin/supervisord"]
-
-
-# Old CMDs for reference
-#CMD ["/entrypoint.sh", "run"]
-#CMD ["/opt/tomcat/bin/catalina.sh", "run"]
