@@ -3,7 +3,6 @@ FROM tomcat:8.5
 MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
 
 # Based on an original Dockerfile by Steffan Sperling, but modified beyond recognition!
-
 # Fix sh
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
