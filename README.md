@@ -31,16 +31,6 @@ In whatever method you specify (apart from a local SSB), an `identityiq.war` wil
 
 If you want to start a cluster with a primary and a secondary node, use the `start-cluster.sh` script instead. All other parameters are the same. The other scripts will remember which you used to provide appropriate output.
 
-## A note on Docker Swarm
-
-This repository is a *single node Docker Compose deployment only*. It does not and is not intended to support Docker Swarm multi-node clusters.
-
-Here's why: The `sailpoint-iiq` image created by this Compose configuration is intended to be lightweight, allowing you to mount whatever IIQ components you need at runtime via Docker volumes. This allows the `start.sh` script to do a lot of the setup work via automatic builds and environment variables, which makes the whole experience much more dynamic. There's no need to rebuild and push the entire image after each SSB change.
-
-Without special plugins, you can't mount Docker volumes across cluster nodes. A Swarm deployment would thus require that a heavyweight IIQ container be pushed to a registry with all IIQ components already in the image. It also seems unwise to assume that your Docker Swarm setup has the plugins I'm expecting.
-
-That said, I do *have* a working Swarm deployment of IIQ and may add support for this in future updates, likely in a separate branch.
-
 ## Example startup output
 
 This is the output of a `start.sh` invocation provided an out-of-box identityiq-7.3.zip.
@@ -80,20 +70,6 @@ Creating iiq_iiq-master_1 ... done
 - Use stop.sh to stop the stack when you're done, or 'docker-compose -p iiq down'
 ```
 
-## Containers
-
-The containers will be started in `-d` (daemon) mode, which runs them in the background.
-
-You can use the `status.sh` script to check the status of the running environment.
-
-It will take 2-3 minutes for IIQ to become available once `start.sh` completes. You'll be able to access your IIQ installation at `http://localhost:8080` with the usual default username and password.
-
-## Git integration
-
-If the value passed to `-b` looks like a git repository, the whole SSB build will be pulled from Git before build.
-
-Pulling an entire SSB build from Git can take forever. The script tracks the most recent value passed to `-b`, and if the repository is the same as last time, it does not do a `clone` but instead a `pull`.
-
 ## Automatically importing (apart from SSB)
 
 Anything placed into the `./build/imports/` directory will be copied to IIQ's `config` directory, retaining folder structure. If you want to automatically import anything, you can list it in a text file, `./build/import-list`, one item per line. Both the folder and file will be created by `start.sh` on first run if they are missing, as they must be mounted into Docker.
@@ -127,6 +103,13 @@ If you use the `-b` flag to the startup script, your SSB project will be built u
 * Import `init-lcm.xml` using the `iiq console`
 
 This is roughly equivalent to `ant clean main createdb extenddb import-stock import-lcm patchdb runUpgrade import-custom dist` in the SSB build.
+
+## Git integration
+
+If the value passed to `-b` looks like a git repository, the whole SSB build will be pulled from Git before build.
+
+Pulling an entire SSB build from Git can take forever. The script tracks the most recent value passed to `-b`, and if the repository is the same as last time, it does not do a `clone` but instead a `pull`.
+
 
 Database
 ========
@@ -212,6 +195,16 @@ Issues
 If you don't use the start.sh script, you will receive the following error on startup. Follow the instructions above. Run `docker-compose build` and then `start.sh` with appropriate parameters.
 
     ERROR: for sailpoint-docker_iiq-master_1  Cannot create container for service iiq-master: create .: volume name is too short, names should be at least two alphanumeric characters
+
+## A note on Docker Swarm
+
+This repository is a *single node Docker Compose deployment only*. It does not and is not intended to support Docker Swarm multi-node clusters.
+
+Here's why: The `sailpoint-iiq` image created by this Compose configuration is intended to be lightweight, allowing you to mount whatever IIQ components you need at runtime via Docker volumes. This allows the `start.sh` script to do a lot of the setup work via automatic builds and environment variables, which makes the whole experience much more dynamic. There's no need to rebuild and push the entire image after each SSB change.
+
+Without special plugins, you can't mount Docker volumes across cluster nodes. A Swarm deployment would thus require that a heavyweight IIQ container be pushed to a registry with all IIQ components already in the image. It also seems unwise to assume that your Docker Swarm setup has the plugins I'm expecting.
+
+That said, I do *have* a working Swarm deployment of IIQ and may add support for this in future updates, likely in a separate branch.
 
 Acknowledgement
 ===============
