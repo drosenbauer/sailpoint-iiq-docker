@@ -139,5 +139,5 @@ then
 	fi
 fi
 
-/opt/tomcat/bin/catalina.sh run
+/opt/tomcat/bin/catalina.sh run | tee -a /opt/tomcat/logs/catalina.out
 
