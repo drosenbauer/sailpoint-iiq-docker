@@ -1,0 +1,63 @@
+dn: ou=People,dc=sailpoint,dc=demo
+changetype: add
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Cashiers,ou=People,dc=sailpoint,dc=demo
+changetype: add
+objectClass: organizationalUnit
+ou: Cashiers
+
+dn: ou=Groups,dc=sailpoint,dc=demo
+changetype: add
+objectClass: organizationalUnit
+ou: Groups
+
+dn: cn=Bootstrap,ou=People,dc=sailpoint,dc=demo
+changetype: add
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+cn: Bootstrap User
+givenName: Bootstrap
+sn: User
+ou: People
+ou: Bootstrap
+uid: bootstrap
+
+dn: cn=Administrators,ou=Groups,dc=sailpoint,dc=demo
+changetype: add
+objectclass: top
+objectclass: groupOfNames
+member: cn=Bootstrap,ou=People,dc=example,dc=com
+cn: Administrators
+
+dn: cn=Cashiers,ou=Groups,dc=sailpoint,dc=demo
+changetype: add
+objectclass: top
+objectclass: groupOfNames
+member: cn=Bootstrap,ou=People,dc=example,dc=com
+cn: Cashiers
+
+dn: cn=Management,ou=Groups,dc=sailpoint,dc=demo
+changetype: add
+objectclass: top
+objectclass: groupOfNames
+member: cn=Bootstrap,ou=People,dc=example,dc=com
+cn: Management
+
+dn: cn=Executives,ou=Groups,dc=sailpoint,dc=demo
+changetype: add
+objectclass: top
+objectclass: groupOfNames
+member: cn=Bootstrap,ou=People,dc=example,dc=com
+cn: Executives
+
+dn: cn=Approvers,ou=Groups,dc=sailpoint,dc=demo
+changetype: add
+objectclass: top
+objectclass: groupOfNames
+member: cn=Bootstrap,ou=People,dc=example,dc=com
+cn: Approvers
+

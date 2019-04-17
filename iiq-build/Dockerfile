@@ -1,26 +1,28 @@
-FROM ubuntu:bionic
+FROM tomcat:8.5
 
 MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
 
 # Based on an original Dockerfile by Steffan Sperling, but modified beyond recognition!
-
-ENV TOMCAT_VERSION 8.5.38
-
 # Fix sh
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
 # Install dependencies
 RUN apt-get update && \
-apt-get install -y apt-utils wget unzip tar mysql-client netcat curl openssh-server openssh-client supervisor openjdk-8-jdk nano less ldap-utils
+apt-get install -y apt-utils wget unzip tar mysql-client netcat curl openssh-server openssh-client supervisor openjdk-8-jdk nano less ldap-utils apt-transport-https
 
-# Get Tomcat
-RUN wget --quiet --no-cookies http://www-eu.apache.org/dist/tomcat/tomcat-8/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz -O /tmp/tomcat.tgz && \
-tar xzvf /tmp/tomcat.tgz -C /opt && \
-mv /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat && \
-rm /tmp/tomcat.tgz && \
-rm -rf /opt/tomcat/webapps/examples && \
-rm -rf /opt/tomcat/webapps/docs && \
-rm -rf /opt/tomcat/webapps/ROOT
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN curl https://packages.microsoft.com/config/debian/9/prod.list | tee /etc/apt/sources.list.d/msprod.list
+RUN apt-get update 
+
+RUN apt-get install -y locales \
+    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen
+	
+RUN ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
+
+
+# Move the default image location to the one this is expecting
+RUN mv /usr/local/tomcat /opt/tomcat
 
 # Add admin/admin user
 ADD tomcat-users.xml /opt/tomcat/conf/
@@ -34,13 +36,16 @@ COPY sql/target.sql /opt/sql/
 
 VOLUME "/opt/iiq"
 
-RUN mkdir /opt/tomcat/webapps/ROOT
+RUN mkdir -p /opt/tomcat/webapps/ROOT
 COPY index.html /opt/tomcat/webapps/ROOT
 
+COPY database-setup.mysql.sh /database-setup.mysql.sh
+COPY database-setup.mssql.sh /database-setup.mssql.sh
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /*.sh
 
 ENV CATALINA_HOME /opt/tomcat
+ENV CATALINA_BASE /opt/tomcat
 ENV PATH $PATH:$CATALINA_HOME/bin
 
 EXPOSE 22 8009 8080
@@ -61,8 +66,3 @@ COPY src/bootstrap.ldif /bootstrap.ldif
 
 # Launch IIQ
 CMD ["/usr/bin/supervisord"]
-
-
-# Old CMDs for reference
-#CMD ["/entrypoint.sh", "run"]
-#CMD ["/opt/tomcat/bin/catalina.sh", "run"]
