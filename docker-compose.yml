@@ -4,20 +4,20 @@ volumes:
   adstore:
 
 services:
-  corp.ad.sailpoint.demo:
-    image: nowsci/samba-domain
-    environment:
-      - DOMAIN=corp.ad.sailpoint.demo
-      - DOMAINPASS=S4ilp0int
-      - INSECURELDAP=true
-      - NOCOMPLEXITY=true
-    volumes:
-       - adtmp:/etc/samba/external
-       - adstore:/var/lib/samba
+#  corp.ad.sailpoint.demo:
+#    image: nowsci/samba-domain
+#    environment:
+#      - DOMAIN=corp.ad.sailpoint.demo
+#      - DOMAINPASS=S4ilp0int
+#      - INSECURELDAP=true
+#      - NOCOMPLEXITY=true
+#    volumes:
+#       - adtmp:/etc/samba/external
+#       - adstore:/var/lib/samba
 #    volumes:
 #      - /etc/localtime:/etc/localtime:ro
-    labels:
-      - traefik.enable=false
+#    labels:
+#      - traefik.enable=false
 
   ssh:
     build: ./ssh-host
@@ -37,6 +37,15 @@ services:
       - traefik.enable=false
 
   db:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=id3ntityIQ
+      - MSSQL_PID=Developer
+    labels:
+      - traefik.enable=false
+
+  db.mysql:
     image: "mysql:${MYSQL_VERSION:-5.7}"
     environment:
       - MYSQL_USER=identityiq
@@ -70,13 +79,17 @@ services:
     build: ./iiq-build
     image: sailpoint-iiq
     environment:
+      - DATABASE_TYPE=mssql
+      - MSSQL_USER=identityiq
+      - MSSQL_PASS=Id3ntityiq
+      - MSSQL_SA_PASSWORD=id3ntityIQ
+      - "MYSQL_HOST=db.mysql"
       - MYSQL_USER=identityiq
       - MYSQL_PASSWORD=identityiq
       - MYSQL_DATABASE=identityiq
       - MYSQL_ROOT_PASSWORD=password
       - IIQ_VERSION=7.2
       - IIQ_PATCH=${IIQ_PATCH}
-      - SKIP_DEMO_COMPANY_DATA=${SKIP_DEMO_COMPANY_DATA}
     depends_on:
       - db
       - mail

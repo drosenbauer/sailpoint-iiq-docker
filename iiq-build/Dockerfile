@@ -14,7 +14,13 @@ apt-get install -y apt-utils wget unzip tar mysql-client netcat curl openssh-ser
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 RUN curl https://packages.microsoft.com/config/debian/9/prod.list | tee /etc/apt/sources.list.d/msprod.list
 RUN apt-get update 
+
+RUN apt-get install -y locales \
+    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen
+	
 RUN ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
+
 
 # Move the default image location to the one this is expecting
 RUN mv /usr/local/tomcat /opt/tomcat
@@ -34,8 +40,10 @@ VOLUME "/opt/iiq"
 RUN mkdir -p /opt/tomcat/webapps/ROOT
 COPY index.html /opt/tomcat/webapps/ROOT
 
+COPY database-setup.mysql.sh /database-setup.mysql.sh
+COPY database-setup.mssql.sh /database-setup.mssql.sh
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /*.sh
 
 ENV CATALINA_HOME /opt/tomcat
 ENV CATALINA_BASE /opt/tomcat
