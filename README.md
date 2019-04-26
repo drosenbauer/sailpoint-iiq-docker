@@ -1,3 +1,15 @@
+Quick Start
+===========
+
+On a Linux or Linux-like infrastructure:
+
+1.  Install Docker and Docker Compose.
+2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
+3.  `git clone <this repo>`
+4.  `cd sailpoint-docker`
+5.  `docker-compose build`
+6.  `./start.sh -z /path/to/identityiq-7.3.zip`
+
 Usage
 =====
 
@@ -19,56 +31,44 @@ In whatever method you specify (apart from a local SSB), an `identityiq.war` wil
 
 If you want to start a cluster with a primary and a secondary node, use the `start-cluster.sh` script instead. All other parameters are the same. The other scripts will remember which you used to provide appropriate output.
 
-## A note on Docker Swarm
-
-This repository is a *single node Docker Compose deployment only*. It does not and is not intended to support Docker Swarm multi-node clusters.
-
-Here's why: The `sailpoint-iiq` image created by this Compose configuration is intended to be lightweight, allowing you to mount whatever IIQ components you need at runtime via Docker volumes. This allows the `start.sh` script to do a lot of the setup work via automatic builds and environment variables, which makes the whole experience much more dynamic. There's no need to rebuild and push the entire image after each SSB change.
-
-Without special plugins, you can't mount Docker volumes across cluster nodes. A Swarm deployment would thus require that a heavyweight IIQ container be pushed to a registry with all IIQ components already in the image. It also seems unwise to assume that your Docker Swarm setup has the plugins I'm expecting.
-
-That said, I do *have* a working Swarm deployment of IIQ and may add support for this in future updates, likely in a separate branch.
-
 ## Example startup output
 
-    host:pub-sailpoint-docker devin$ ./start-cluster.sh -z identityiq-7.3.zip
-     => Creating and cleaning build directory
-     => Build directory is /Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build
-     => Dump configuration
-       Compose file: docker-compose-cluster.yml
-     => No SSB; extracting WAR from identityiq ZIP file
-     => Creating .env file for Docker
-      SPTARGET=
-      IIQ_WAR=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/identityiq.war
-      LISTEN_PORT=8080
-      SSB=
-      IIQ_PATCH=
-      SKIP_DEMO_COMPANY_DATA=
-      IIQ_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/imports
-      IIQ_AUTO_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/import-list
-     => Starting Docker...
-    Creating network "iiq_default" with the default driver
-    Creating iiq_lb2_1  ... done
-    Creating iiq_ldap_1 ... done
-    Creating iiq_ssh_1  ... done
-    Creating iiq_db_1   ... done
-    Creating iiq_mail_1 ... done
-    Creating iiq_iiq-master_1 ... done
-    Creating iiq_iiq-secondary_1 ... done
+This is the output of a `start.sh` invocation provided an out-of-box identityiq-7.3.zip.
 
-## Containers
+```
+macos:pub-sailpoint-docker devin$ ./start.sh -z identityiq-7.3.zip
+ => Checking for a running instance of sailpoint-iiq in Docker...
+ => Looks clear!
+ => Creating and cleaning build directory
+ => Build directory is /Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build
+ => Dump configuration
+   Compose file: docker-compose.yml
+ => No SSB; extracting WAR from identityiq ZIP file
+ => Creating .env file for Docker
+  SPTARGET=
+  IIQ_WAR=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/identityiq.war
+  LISTEN_PORT=8080
+  SSB=
+  IIQ_PATCH=
+  SKIP_DEMO_COMPANY_DATA=
+  IIQ_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/imports
+  IIQ_AUTO_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/import-list
+ => Starting Docker...
+Creating network "iiq_default" with the default driver
+Creating volume "iiq_adtmp" with default driver
+Creating volume "iiq_adstore" with default driver
+Creating iiq_lb2_1      ... done
+Creating iiq_mail_1     ... done
+Creating iiq_db.mysql_1 ... done
+Creating iiq_ldap_1     ... done
+Creating iiq_ssh_1      ... done
+Creating iiq_db_1       ... done
+Creating iiq_iiq-master_1 ... done
 
-The containers will be started in `-d` (daemon) mode, which runs them in the background.
+- Wait about two minutes before attempting to connect to http://localhost:8080/identityiq
 
-You can use the `status.sh` script to check the status of the running environment.
-
-It will take 2-3 minutes for IIQ to become available once `start.sh` completes. You'll be able to access your IIQ installation at `http://localhost:8080` with the usual default username and password.
-
-## Git integration
-
-If the value passed to `-b` looks like a git repository, the whole SSB build will be pulled from Git before build.
-
-Pulling an entire SSB build from Git can take forever. The script tracks the most recent value passed to `-b`, and if the repository is the same as last time, it does not do a `clone` but instead a `pull`.
+- Use stop.sh to stop the stack when you're done, or 'docker-compose -p iiq down'
+```
 
 ## Automatically importing (apart from SSB)
 
@@ -104,21 +104,38 @@ If you use the `-b` flag to the startup script, your SSB project will be built u
 
 This is roughly equivalent to `ant clean main createdb extenddb import-stock import-lcm patchdb runUpgrade import-custom dist` in the SSB build.
 
+## Git integration
+
+If the value passed to `-b` looks like a git repository, the whole SSB build will be pulled from Git before build.
+
+Pulling an entire SSB build from Git can take forever. The script tracks the most recent value passed to `-b`, and if the repository is the same as last time, it does not do a `clone` but instead a `pull`.
+
+
+Database
+========
+
+By default, the Compose stack uses is Microsoft's `mssql:latest` image. This is free for use in non-Production environments. The SA password is available in `docker-compose.yml`. 
+
+To switch to MySQL, you can change the `DATABASE_TYPE` environment variable in the compose file to `mysql`. The startup script will run appropriate database installation commands depending on the type you specify.
+
 Services
 ========
 
-This Docker Compose file will start up six services in six containers:
+This Docker Compose file will start up several services:
 
-* db: MySQL 5.7
+* db.mysql: MySQL 5.7
+* db: The latest MSSQL developer image
 * mail: MailHog
 * ldap: OpenLDAP
 * ssh: An SSH server
-* lb2: A load balancer based on Traefik
+* lb2: The load balancer Traefik
 * iiq-master: IdentityIQ primary node
 
 These should be sufficient to demonstrate most of the non-proprietary connectors in IIQ. The service names double as the hostnames from within the containers, so IIQ sees the database host as having DNS name `db`, LDAP as having the DNS name `ldap`, etc. 
 
 Default usernames and passwords are available in the `docker-compose.yml` file.
+
+Active Directory and other Windows connectors will require using a Windows installation. The IQService does run in Mono but the user management APIs required for these connectors are not present outside of Windows.
 
 Load balancer
 =============
@@ -178,6 +195,16 @@ Issues
 If you don't use the start.sh script, you will receive the following error on startup. Follow the instructions above. Run `docker-compose build` and then `start.sh` with appropriate parameters.
 
     ERROR: for sailpoint-docker_iiq-master_1  Cannot create container for service iiq-master: create .: volume name is too short, names should be at least two alphanumeric characters
+
+## A note on Docker Swarm
+
+This repository is a *single node Docker Compose deployment only*. It does not and is not intended to support Docker Swarm multi-node clusters.
+
+Here's why: The `sailpoint-iiq` image created by this Compose configuration is intended to be lightweight, allowing you to mount whatever IIQ components you need at runtime via Docker volumes. This allows the `start.sh` script to do a lot of the setup work via automatic builds and environment variables, which makes the whole experience much more dynamic. There's no need to rebuild and push the entire image after each SSB change.
+
+Without special plugins, you can't mount Docker volumes across cluster nodes. A Swarm deployment would thus require that a heavyweight IIQ container be pushed to a registry with all IIQ components already in the image. It also seems unwise to assume that your Docker Swarm setup has the plugins I'm expecting.
+
+That said, I do *have* a working Swarm deployment of IIQ and may add support for this in future updates, likely in a separate branch.
 
 Acknowledgement
 ===============
