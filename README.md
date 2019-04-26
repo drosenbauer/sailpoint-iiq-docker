@@ -10,6 +10,8 @@ On a Linux or Linux-like infrastructure:
 5.  `docker-compose build`
 6.  `./start.sh -z /path/to/identityiq-7.3.zip`
 
+**DO NOT run `docker-compose up` as you normally would. The `docker-compose.yml` is not standalone and requires external stuff.`**
+
 Usage
 =====
 
