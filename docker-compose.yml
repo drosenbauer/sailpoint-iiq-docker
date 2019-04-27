@@ -50,8 +50,9 @@ services:
 
   lb2:
     image: traefik
-    command: --docker --docker.swarmMode --docker.domain=traefik --docker.watch --api --web
-    #command: --api --docker --web --logLevel=DEBUG
+    # Switch the following two commands for Swarm mode
+    #command: --docker --docker.swarmMode --docker.domain=traefik --docker.watch --api --web
+    command: --api --docker --web --logLevel=DEBUG
     ports:
       - "${LISTEN_PORT:-8080}:80"      # The HTTP port
       - "28080:8080"  # The Web UI (enabled by --api)
