@@ -63,7 +63,7 @@ services:
 
   iiq-master:
     build: ./iiq-build
-    image: sailpoint-iiq
+    image: identityworksllc/sailpoint-iiq
     environment:
       - DATABASE_TYPE=mssql
       - MSSQL_USER=identityiq
@@ -76,6 +76,8 @@ services:
       - MYSQL_ROOT_PASSWORD=password
       - IIQ_VERSION=7.2
       - IIQ_PATCH=${IIQ_PATCH}
+    ports:
+      - 8880:8080
     depends_on:
       - db
       - mail

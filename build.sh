@@ -2,37 +2,19 @@
 
 source bin/include/utils.sh
 
-greenecho " => Checking for a running instance of sailpoint-iiq in Docker..."
-
-OUTPUT=`docker-compose -p iiq ps | grep 'iiq-master'`
-
-if [[ ! -z "${OUTPUT}" ]]; then
-	redecho "The IIQ Docker stack appears to be already running. Use the 'stop.sh' script to stop it first."
-	exit 11
-fi
-
-greenecho " => Looks clear!"
-
-while getopts ":b:f:t:z:p:w:sk" opt; do
+while getopts ":b:t:z:w:sk" opt; do
   case ${opt} in
     b ) SSB=${OPTARG}
-      ;;
-    f ) COMPOSE=${OPTARG}
       ;;
     t ) SPTARGET=${OPTARG}
       ;;
     z ) IIQ_ZIP=${OPTARG}
       ;;
-    p ) LISTEN_PORT=${OPTARG}
-      ;;
     s ) SKIP_DEMO_COMPANY_DATA=y
       ;;
     w ) IIQ_WAR=${OPTARG}
       ;;
-    k ) KUBERNETES=y
-        NOSTART=y
-      ;;
-    \? ) echo "Usage: ./start.sh [-b <build directory>] [-f <compose-file>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>] [-p <http port>] [-s]"
+    \? ) echo "Usage: ./start.sh [-b <existing SSB build directory>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>]"
       ;;
   esac
 done
@@ -49,10 +31,6 @@ fi
 if [[ ! -z $SSB ]] && [[ ! -z $IIQ_ZIP ]]; then
 	echo "The zip (-z) and build (-b) options are mutually exclusive and you specified both"
 	exit 5
-fi
-
-if [[ -z $COMPOSE ]]; then
-	COMPOSE=docker-compose.yml
 fi
 
 greenecho " => Creating and cleaning build directory"
@@ -134,10 +112,8 @@ if [[ -z ${JAVA} ]]; then
 	exit 3
 fi
 
-greenecho " => Dump configuration"
-echo "   Compose file: ${COMPOSE}"
-
 if [[ ! -z ${SSB} ]]; then
+	greenecho " => SSB configuration -- "
 	echo "   SSB build: ${SSB}/build.xml"
 	echo "   SSB SPTARGET: ${SPTARGET}"
 fi
@@ -170,17 +146,10 @@ if [[ ! -e ${BUILD}/identityiq.war ]]; then
 	exit 9
 fi
 
-greenecho " => Creating .env file for Docker"
-echo "SPTARGET=${SPTARGET}" > .env
-echo "IIQ_WAR=${BUILD}/identityiq.war" >> .env
-echo "LISTEN_PORT=${LISTEN_PORT}" >> .env
-echo "SSB=${SSB}" >> .env
-echo "IIQ_PATCH=${IIQ_PATCH}" >> .env
-echo "SKIP_DEMO_COMPANY_DATA=${SKIP_DEMO_COMPANY_DATA}" >> .env
-
-cat .env | sed 's/^/  /'
-
 cp ${BUILD}/identityiq.war iiq-build/src/
 
-docker-compose build
+greenecho " => Building Docker containers, please wait a minute or two..."
 
+docker-compose --log-level=ERROR build
+
+greenecho " => All done!"
