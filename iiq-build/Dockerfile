@@ -34,7 +34,10 @@ RUN mkdir -p /opt/sql
 COPY sql/employees.zip /opt/sql/
 COPY sql/target.sql /opt/sql/
 
-VOLUME "/opt/iiq"
+RUN mkdir -p /opt/iiq
+RUN mkdir -p /opt/iiq/imports
+COPY src/identityiq.war /opt/iiq/identityiq.war
+COPY src/imports/* /opt/iiq/imports
 
 RUN mkdir -p /opt/tomcat/webapps/ROOT
 COPY index.html /opt/tomcat/webapps/ROOT
@@ -50,8 +53,6 @@ ENV PATH $PATH:$CATALINA_HOME/bin
 
 EXPOSE 22 8009 8080
 VOLUME "/opt/tomcat/webapps"
-VOLUME "/opt/iiq/import-list"
-VOLUME "/opt/iiq/imports"
 WORKDIR /opt/tomcat
 
 RUN mkdir -p /var/run/sshd /var/log/supervisor

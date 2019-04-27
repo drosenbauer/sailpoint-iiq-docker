@@ -1,26 +1,6 @@
 #!/bin/bash
 
-realname() {
-	echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
-}
-
-pushd () {
-    command pushd "$@" > /dev/null
-}
-
-popd () {
-    command popd "$@" > /dev/null
-}
-
-greenecho() {
-	text=$1
-	echo -e "\033[1;32m${text}\033[0m"
-}
-
-redecho() {
-	text=$1
-	echo -e "\033[1;31m${text}\033[0m"
-}
+source bin/include/utils.sh
 
 greenecho " => Checking for a running instance of sailpoint-iiq in Docker..."
 
@@ -33,7 +13,7 @@ fi
 
 greenecho " => Looks clear!"
 
-while getopts ":b:f:t:z:p:w:s" opt; do
+while getopts ":b:f:t:z:p:w:sk" opt; do
   case ${opt} in
     b ) SSB=${OPTARG}
       ;;
@@ -48,6 +28,9 @@ while getopts ":b:f:t:z:p:w:s" opt; do
     s ) SKIP_DEMO_COMPANY_DATA=y
       ;;
     w ) IIQ_WAR=${OPTARG}
+      ;;
+    k ) KUBERNETES=y
+        NOSTART=y
       ;;
     \? ) echo "Usage: ./start.sh [-b <build directory>] [-f <compose-file>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>] [-p <http port>] [-s]"
       ;;
@@ -187,22 +170,6 @@ if [[ ! -e ${BUILD}/identityiq.war ]]; then
 	exit 9
 fi
 
-if [[ ! -e "${BUILD}/import-list" ]]; then
-	touch "${BUILD}/import-list"
-fi
-
-if [[ ! -e "${BUILD}/imports" ]]; then
-	mkdir -p "${BUILD}/imports"
-fi
-
-if [[ ! -e "${BUILD}/ldap" ]]; then
-	mkdir -p "${BUILD}/ldap"
-	cp bootstrap.ldif "${BUILD}/ldap"
-fi
-
-IMPORTS_DIR=`realname build/imports`
-IMPORTS_FILE=`realname build/import-list`
-
 greenecho " => Creating .env file for Docker"
 echo "SPTARGET=${SPTARGET}" > .env
 echo "IIQ_WAR=${BUILD}/identityiq.war" >> .env
@@ -210,19 +177,10 @@ echo "LISTEN_PORT=${LISTEN_PORT}" >> .env
 echo "SSB=${SSB}" >> .env
 echo "IIQ_PATCH=${IIQ_PATCH}" >> .env
 echo "SKIP_DEMO_COMPANY_DATA=${SKIP_DEMO_COMPANY_DATA}" >> .env
-echo "IIQ_IMPORTS=${IMPORTS_DIR}" >> .env
-echo "IIQ_AUTO_IMPORTS=${IMPORTS_FILE}" >> .env
 
 cat .env | sed 's/^/  /'
 
-if [[ -z ${NOSTART} ]]; then
-	greenecho " => Starting Docker..."
-	docker-compose -p iiq -f "${COMPOSE}" up -d
-	echo ${COMPOSE} > ${BUILD}/.composefile
-fi
+cp ${BUILD}/identityiq.war iiq-build/src/
 
-echo 
+docker-compose build
 
-greenecho "- Wait about two minutes before attempting to connect to http://localhost:${LISTEN_PORT}/identityiq "
-echo
-greenecho "- Use stop.sh to stop the stack when you're done, or 'docker-compose -p iiq down'"
