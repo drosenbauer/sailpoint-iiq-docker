@@ -11,8 +11,10 @@ On a Linux or Linux-like infrastructure:
 
 You now have two options:
 
-1. Start up a standalone stack with `docker-compose up`. IIQ will be listening on port 8880.
-2. Deploy to a Docker Swarm cluster using `docker stack deploy --compose-file docker-compose.yml iiq`. IIQ will be listening on port 8080 via Traefik.
+1. (Recommended) Start up a standalone stack with `docker-compose up`.
+2. Deploy to a Docker Swarm cluster using `docker stack deploy --compose-file docker-compose.yml iiq`. Note that you will need to modify the Compose file to enable Traefik's swarm mode. (The correct command is already present, but commented out.)
+
+Either way, IIQ will now be available on port 8080.
 
 Usage
 =====
@@ -21,9 +23,9 @@ Usage
 
 On initial download, you will need to build the images in your local Docker environment. 
 
-## With the build script
+## With the provided build script
 
-You must provide the location of an IdentityIQ WAR using one of three flags:
+You must specify the location of an IdentityIQ WAR using one of three flags:
 
 * `-z`: A local identityiq-7.x.zip
 * `-b`: An SSB build folder (or Git repository), which must contain a build.xml
@@ -31,11 +33,11 @@ You must provide the location of an IdentityIQ WAR using one of three flags:
 
 The WAR file will be copied to `iiq-build/src/identityiq.war`. 
 
-Once everything is staged, the build script will build the various Docker images.
+Once everything is staged, the build script will build the Docker images.
 
 ## Manually 
 
-Of course, you can copy your WAR file there manually and then invoke `docker-compose build` yourself.
+Of course, you can copy a WAR file there manually and then invoke `docker-compose build` yourself.
 
 # Additional scripts
 
