@@ -11,7 +11,7 @@ On a Linux or Linux-like infrastructure:
 
 You now have two options:
 
-1. (Recommended) Start up a standalone stack with `docker-compose up`.
+1. (Recommended) Start up a standalone stack with `docker-compose up -d`.
 2. Deploy to a Docker Swarm cluster using `docker stack deploy --compose-file docker-compose.yml iiq`. Note that you will need to modify the Compose file to enable Traefik's swarm mode. (The correct command is already present, but commented out.)
 
 Either way, IIQ will now be available on port 8080.
