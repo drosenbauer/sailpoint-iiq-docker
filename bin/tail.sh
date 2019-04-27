@@ -6,4 +6,4 @@ else
 	FILE=docker-compose.yml
 fi
 
-docker-compose -p iiq -f $FILE logs -f "$@"
+docker-compose logs -f "$@"

@@ -36,8 +36,11 @@ COPY sql/target.sql /opt/sql/
 
 RUN mkdir -p /opt/iiq
 RUN mkdir -p /opt/iiq/imports
+RUN mkdir -p /opt/iiq/plugins
+
 COPY src/identityiq.war /opt/iiq/identityiq.war
-COPY src/imports/* /opt/iiq/imports
+COPY src/imports/* /opt/iiq/imports/
+COPY src/plugins/* /opt/iiq/plugins/
 
 RUN mkdir -p /opt/tomcat/webapps/ROOT
 COPY index.html /opt/tomcat/webapps/ROOT

@@ -104,6 +104,12 @@ importIIQObjects() {
 			iiq "import sp.init-custom.xml"
 		fi
 	fi
+	if [[ -e /opt/iiq/plugins ]]; then
+		for file in `ls /opt/iiq/plugins/*.zip`
+		do
+			iiq "plugin install $file"
+		done
+	fi
 }
 
 export PATH=$PATH:/opt/mssql-tools/bin

@@ -2,13 +2,18 @@
 
 source bin/include/utils.sh
 
-while getopts ":b:t:z:w:sk" opt; do
+PLUGINS=()
+
+while getopts ":b:t:z:w:p:s" opt; do
   case ${opt} in
     b ) SSB=${OPTARG}
       ;;
     t ) SPTARGET=${OPTARG}
       ;;
     z ) IIQ_ZIP=${OPTARG}
+      ;;
+    p )
+      PLUGINS+=("${OPTARG}")
       ;;
     s ) SKIP_DEMO_COMPANY_DATA=y
       ;;
@@ -19,19 +24,36 @@ while getopts ":b:t:z:w:sk" opt; do
   esac
 done
 
-if [[ -z ${LISTEN_PORT} ]]; then
-	LISTEN_PORT=8080
-fi
-
+# Validate WAR locator inputs
 if [[ -z $SSB ]] && [[ -z $IIQ_ZIP ]] && [[ -z $IIQ_WAR ]]; then
 	echo "You must specify an IIQ zip (-z), an IIQ war (-w), or an SSB build directory (-b)"
 	exit 5
 fi
 
+# Validate incompatible inputs
 if [[ ! -z $SSB ]] && [[ ! -z $IIQ_ZIP ]]; then
 	echo "The zip (-z) and build (-b) options are mutually exclusive and you specified both"
 	exit 5
 fi
+
+# Validate specified locations
+if [[ ! -z $IIQ_ZIP ]] && [[ ! -e $IIQ_ZIP ]]; then
+	redecho "IIQ zip file $IIQ_ZIP does not exist"
+	exit 5
+fi
+
+if [[ ! -z $IIQ_WAR ]] && [[ ! -e $IIQ_WAR ]]; then
+	redecho "IIQ war file $IIQ_WAR does not exist"
+	exit 5
+fi
+
+for plugin in "${PLUGINS[@]}"
+do
+	if [[ ! -e $plugin ]]; then
+		redecho "Cannot find plugin $plugin"
+		exit 5
+	fi
+done
 
 greenecho " => Creating and cleaning build directory"
 HERE=`pwd`
@@ -147,6 +169,13 @@ if [[ ! -e ${BUILD}/identityiq.war ]]; then
 fi
 
 cp ${BUILD}/identityiq.war iiq-build/src/
+
+mkdir -p iiq-build/src/plugins
+
+for plugin in "${PLUGINS[@]}"
+do
+	cp "$plugin" "iiq-build/src/plugins"
+done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
 
