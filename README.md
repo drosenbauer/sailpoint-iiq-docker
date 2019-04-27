@@ -1,6 +1,8 @@
 Quick Start
 ===========
 
+# Compose
+
 On a Linux or Linux-like infrastructure:
 
 1.  Install Docker and Docker Compose.
@@ -8,13 +10,18 @@ On a Linux or Linux-like infrastructure:
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
 5.  `./build.sh -z /path/to/identityiq-7.3.zip`
+6.  Start up a standalone stack with `docker-compose up -d`.
 
-You now have two options:
+IIQ will now be available on port 8080.
 
-1. (Recommended) Start up a standalone stack with `docker-compose up -d`.
-2. Deploy to a Docker Swarm cluster using `docker stack deploy --compose-file docker-compose.yml iiq`. Note that you will need to modify the Compose file to enable Traefik's swarm mode. (The correct command is already present, but commented out.)
+# Swarm
 
-Either way, IIQ will now be available on port 8080.
+If you would like to run in Swarm Mode, you will need to make a couple changes to the Compose file:
+
+1.  Uncomment the section under service `lb2` indicated in a comment.
+2.  Move all `labels:` tags under a `deploy:` tag.
+
+If you are interested in Swarm, I trust that you otherwise know what you're doing.
 
 Usage
 =====
