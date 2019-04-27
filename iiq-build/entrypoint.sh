@@ -98,6 +98,11 @@ importIIQObjects() {
 				done
 			fi
 		fi
+	else
+		if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/config/sp.init-custom.xml ]]; then
+			echo "=> This appears to be an existing install; importing SSB customizations only"
+			iiq "import sp.init-custom.xml"
+		fi
 	fi
 }
 
