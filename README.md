@@ -7,21 +7,21 @@ On a Linux or Linux-like infrastructure:
 2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
-5.  `docker-compose build`
-6.  `./start.sh -z /path/to/identityiq-7.3.zip`
+5.  `./build.sh -z /path/to/identityiq-7.3.zip`
 
-**DO NOT run `docker-compose up` as you normally would. The `docker-compose.yml` is not standalone and requires external stuff.`**
+You now have two options:
+
+1. Start up a standalone stack with `docker-compose up`. IIQ will be listening on port 8880.
+2. Deploy to a Docker Swarm cluster using `docker stack deploy --compose-file docker-compose.yml iiq`. IIQ will be listening on port 8080 via Traefik.
 
 Usage
 =====
 
 # Building
 
-On initial download, you will need to build the images in your local Docker environment. Just run `docker-compose build` in the main project directory.
+On initial download, you will need to build the images in your local Docker environment. 
 
-# Starting
-
-A startup script, `start.sh`, has provided to give you numerous options. 
+## With the build script
 
 You must provide the location of an IdentityIQ WAR using one of three flags:
 
@@ -29,52 +29,17 @@ You must provide the location of an IdentityIQ WAR using one of three flags:
 * `-b`: An SSB build folder (or Git repository), which must contain a build.xml
 * `-w`: An already-built WAR file
 
-In whatever method you specify (apart from a local SSB), an `identityiq.war` will eventually be copied to the `build` subfolder for staging and then mounted into the running Docker container.
+The WAR file will be copied to `iiq-build/src/identityiq.war`. 
 
-If you want to start a cluster with a primary and a secondary node, use the `start-cluster.sh` script instead. All other parameters are the same. The other scripts will remember which you used to provide appropriate output.
+Once everything is staged, the build script will build the various Docker images.
 
-## Example startup output
+## Manually 
 
-This is the output of a `start.sh` invocation provided an out-of-box identityiq-7.3.zip.
+Of course, you can copy your WAR file there manually and then invoke `docker-compose build` yourself.
 
-```
-macos:pub-sailpoint-docker devin$ ./start.sh -z identityiq-7.3.zip
- => Checking for a running instance of sailpoint-iiq in Docker...
- => Looks clear!
- => Creating and cleaning build directory
- => Build directory is /Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build
- => Dump configuration
-   Compose file: docker-compose.yml
- => No SSB; extracting WAR from identityiq ZIP file
- => Creating .env file for Docker
-  SPTARGET=
-  IIQ_WAR=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/identityiq.war
-  LISTEN_PORT=8080
-  SSB=
-  IIQ_PATCH=
-  SKIP_DEMO_COMPANY_DATA=
-  IIQ_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/imports
-  IIQ_AUTO_IMPORTS=/Users/devin/code/docker/docker-sailpoint/pub-sailpoint-docker/build/import-list
- => Starting Docker...
-Creating network "iiq_default" with the default driver
-Creating volume "iiq_adtmp" with default driver
-Creating volume "iiq_adstore" with default driver
-Creating iiq_lb2_1      ... done
-Creating iiq_mail_1     ... done
-Creating iiq_db.mysql_1 ... done
-Creating iiq_ldap_1     ... done
-Creating iiq_ssh_1      ... done
-Creating iiq_db_1       ... done
-Creating iiq_iiq-master_1 ... done
+# Additional scripts
 
-- Wait about two minutes before attempting to connect to http://localhost:8080/identityiq
-
-- Use stop.sh to stop the stack when you're done, or 'docker-compose -p iiq down'
-```
-
-## Automatically importing (apart from SSB)
-
-Anything placed into the `./build/imports/` directory will be copied to IIQ's `config` directory, retaining folder structure. If you want to automatically import anything, you can list it in a text file, `./build/import-list`, one item per line. Both the folder and file will be created by `start.sh` on first run if they are missing, as they must be mounted into Docker.
+Additional scripts are provided in the `bin` directory.
 
 ## Output
 
@@ -112,7 +77,6 @@ If the value passed to `-b` looks like a git repository, the whole SSB build wil
 
 Pulling an entire SSB build from Git can take forever. The script tracks the most recent value passed to `-b`, and if the repository is the same as last time, it does not do a `clone` but instead a `pull`.
 
-
 Database
 ========
 
@@ -125,7 +89,7 @@ Services
 
 This Docker Compose file will start up several services:
 
-* db.mysql: MySQL 5.7
+* db_mysql: MySQL 5.7
 * db: The latest MSSQL developer image
 * mail: MailHog
 * ldap: OpenLDAP
@@ -142,21 +106,21 @@ Active Directory and other Windows connectors will require using a Windows insta
 Load balancer
 =============
 
-The load balancer [Traefik](https://traefik.io/) is used to forward traffic to one or more backend IIQ hosts. It is granted access to the Docker socket which essentially gives it "root" access to your Docker environment. It will monitor containers as they start and forward traffic among them automatically. It is configured for sticky sessions by default, as IIQ requires.
+The load balancer [Traefik](https://traefik.io/) is used to forward traffic to one or more backend IIQ hosts. It is granted access to the Docker socket which essentially gives it "root" access to your Docker environment. It will monitor containers as they start and forward traffic among them automatically. It is configured for sticky sessions by default, as IIQ requires. Once the stack is started, you can access the Traefik dashboard at `http://localhost:28080`.
 
-Once the stack is started, you can access the Traefik dashboard at `http://localhost:28080`.
+Traefik runs in Swarm mode. If you choose to start up a single-node stack using `docker-compose up`, Traefik will not be able to listen to your Docker stack, so you will need to use port 8880 to access Tomcat directly.
 
 SERI
 ====
 
-If a folder called `config/seri` is detected by the startup script, the SERI init objects will be imported automatically. 
+If `WEB-INF/config/seri` is detected by the startup script, the SERI init objects will be imported automatically. 
 
 Additionally, you will be able to use the `seri.sh` script to more easily push in any SERI component after IIQ is started. If the component is in the folder `config/seri/catalog/UseCase-XYZ`, you would specify `UseCase-XYZ` as the parameter to `seri.sh`. The `setup.xml` file in that folder will be imported. If the folder you specify begins with *Plugin*, the contents will be imported as one or more plugins instead.
 
 Accelerator Pack
 ================
 
-If the IIQ Accelerator Pack is detected via the XML file `init-acceleratorpack.xml`, it will be automatically imported.
+If the IIQ Accelerator Pack is detected via the XML file `WEB-INF/config/init-acceleratorpack.xml`, it will be automatically imported.
 
 Procedurally generated HR Data
 ==============================
@@ -190,23 +154,6 @@ The dataset includes an `ssn` field with SSN-formatted randomly generated values
 Additional larger or smaller ramdomly generated user sets are available on request. 
 
 We also have generated university datasets with users having multiple valid affiliations.
-
-Issues
-======
-
-If you don't use the start.sh script, you will receive the following error on startup. Follow the instructions above. Run `docker-compose build` and then `start.sh` with appropriate parameters.
-
-    ERROR: for sailpoint-docker_iiq-master_1  Cannot create container for service iiq-master: create .: volume name is too short, names should be at least two alphanumeric characters
-
-## A note on Docker Swarm
-
-This repository is a *single node Docker Compose deployment only*. It does not and is not intended to support Docker Swarm multi-node clusters.
-
-Here's why: The `sailpoint-iiq` image created by this Compose configuration is intended to be lightweight, allowing you to mount whatever IIQ components you need at runtime via Docker volumes. This allows the `start.sh` script to do a lot of the setup work via automatic builds and environment variables, which makes the whole experience much more dynamic. There's no need to rebuild and push the entire image after each SSB change.
-
-Without special plugins, you can't mount Docker volumes across cluster nodes. A Swarm deployment would thus require that a heavyweight IIQ container be pushed to a registry with all IIQ components already in the image. It also seems unwise to assume that your Docker Swarm setup has the plugins I'm expecting.
-
-That said, I do *have* a working Swarm deployment of IIQ and may add support for this in future updates, likely in a separate branch.
 
 Acknowledgement
 ===============
