@@ -14,8 +14,7 @@ services:
       - LDAP_DOMAIN=sailpoint.demo
       - LDAP_ORGANISATION=Sailpoint Demo
       - LDAP_ADMIN_PASSWORD=spadmin
-    deploy:
-      labels: 
+    labels: 
         - traefik.enable=false
 
   db:
@@ -24,8 +23,7 @@ services:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=id3ntityIQ
       - MSSQL_PID=Developer
-    deploy:
-      labels:
+    labels:
         - traefik.enable=false
 
   db_mysql:
@@ -35,8 +33,7 @@ services:
       - MYSQL_PASSWORD=identityiq
       - MYSQL_DATABASE=identityiq
       - MYSQL_ROOT_PASSWORD=password
-    deploy:
-      labels: 
+    labels: 
         - traefik.enable=false
 
   mail:
@@ -44,8 +41,7 @@ services:
     ports:
       - 1025:1025
       - "${MAILHOG_HTTP_PORT:-8025}:8025"
-    deploy:
-      labels:
+    labels:
         - traefik.enable=false
 
   lb2:
@@ -58,8 +54,7 @@ services:
       - "28080:8080"  # The Web UI (enabled by --api)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
-    deploy:
-      labels:
+    labels:
         - traefik.enable=false
 
   iiq-master:
@@ -83,8 +78,7 @@ services:
       - db
       - mail
       - ldap
-    deploy:
-      labels:
+    labels:
         - traefik.backend=iiq
         - traefik.port=8080
         - traefik.docker.network=frontend
