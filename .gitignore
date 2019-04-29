@@ -1,5 +1,7 @@
 .DS_Store
 .env
-iiq-build/src/
+iiq-build/src/identityiq.war
+iiq-build/src/plugins/*.zip
+iiq-build/src/imports/*.xml
 build/
 identityiq*.zip
