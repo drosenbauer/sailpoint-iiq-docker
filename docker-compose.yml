@@ -1,24 +1,5 @@
-version: '2.3'
-volumes:
-  adtmp:
-  adstore:
-
+version: '3'
 services:
-#  corp.ad.sailpoint.demo:
-#    image: nowsci/samba-domain
-#    environment:
-#      - DOMAIN=corp.ad.sailpoint.demo
-#      - DOMAINPASS=S4ilp0int
-#      - INSECURELDAP=true
-#      - NOCOMPLEXITY=true
-#    volumes:
-#       - adtmp:/etc/samba/external
-#       - adstore:/var/lib/samba
-#    volumes:
-#      - /etc/localtime:/etc/localtime:ro
-#    labels:
-#      - traefik.enable=false
-
   ssh:
     build: ./ssh-host
     image: ssh-host
@@ -34,7 +15,7 @@ services:
       - LDAP_ORGANISATION=Sailpoint Demo
       - LDAP_ADMIN_PASSWORD=spadmin
     labels: 
-      - traefik.enable=false
+        - traefik.enable=false
 
   db:
     image: mcr.microsoft.com/mssql/server:2017-latest
@@ -43,9 +24,9 @@ services:
       - SA_PASSWORD=id3ntityIQ
       - MSSQL_PID=Developer
     labels:
-      - traefik.enable=false
+        - traefik.enable=false
 
-  db.mysql:
+  db_mysql:
     image: "mysql:${MYSQL_VERSION:-5.7}"
     environment:
       - MYSQL_USER=identityiq
@@ -53,19 +34,20 @@ services:
       - MYSQL_DATABASE=identityiq
       - MYSQL_ROOT_PASSWORD=password
     labels: 
-      - traefik.enable=false
+        - traefik.enable=false
 
   mail:
     image: mailhog/mailhog
-    expose:
-      - "1025"
     ports:
+      - 1025:1025
       - "${MAILHOG_HTTP_PORT:-8025}:8025"
     labels:
-      - traefik.enable=false
+        - traefik.enable=false
 
   lb2:
     image: traefik
+    # Switch the following two commands for Swarm mode
+    #command: --docker --docker.swarmMode --docker.domain=traefik --docker.watch --api --web
     command: --api --docker --web --logLevel=DEBUG
     ports:
       - "${LISTEN_PORT:-8080}:80"      # The HTTP port
@@ -73,31 +55,29 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
     labels:
-      - traefik.enable=false
+        - traefik.enable=false
 
   iiq-master:
     build: ./iiq-build
-    image: sailpoint-iiq
+    image: identityworksllc/sailpoint-iiq
     environment:
       - DATABASE_TYPE=mssql
       - MSSQL_USER=identityiq
       - MSSQL_PASS=Id3ntityiq
       - MSSQL_SA_PASSWORD=id3ntityIQ
-      - "MYSQL_HOST=db.mysql"
+      - "MYSQL_HOST=db_mysql"
       - MYSQL_USER=identityiq
       - MYSQL_PASSWORD=identityiq
       - MYSQL_DATABASE=identityiq
       - MYSQL_ROOT_PASSWORD=password
       - IIQ_VERSION=7.2
       - IIQ_PATCH=${IIQ_PATCH}
+    ports:
+      - 8880:8080
     depends_on:
       - db
       - mail
       - ldap
-    volumes:
-      - "${IIQ_WAR}:/opt/iiq/identityiq.war:cached"
-      - "${IIQ_IMPORTS}:/opt/iiq/imports/:cached"
-      - "${IIQ_AUTO_IMPORTS}:/opt/iiq/auto-import-list:cached"
     labels:
         - traefik.backend=iiq
         - traefik.port=8080

@@ -8,4 +8,4 @@ fi
 
 set -x
 
-docker-compose -p iiq -f ${FILE} down "$@" -v
+docker-compose ps
