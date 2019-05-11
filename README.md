@@ -44,15 +44,26 @@ On initial download, you will need to build the images in your local Docker envi
 
 ## With the provided build script
 
-You must specify the location of an IdentityIQ WAR using one of three flags:
+You must specify a way to obtain an identityiq.war using one of three flags:
 
 * `-z`: A local identityiq-7.x.zip
 * `-b`: An SSB build folder (or Git repository), which must contain a build.xml
 * `-w`: An already-built WAR file
 
-The WAR file will be copied to `iiq-build/src/identityiq.war`. 
+The WAR file will be staged to `iiq-build/src/identityiq.war`. 
 
 Once everything is staged, the build script will build the Docker images.
+
+Additional parameters:
+
+* `-p`: Specify the path to a JAR file for a major patch, such as 7.3p2
+* `-e`: Specify the path to a hotfix archive
+* `-m`: Specify the patch to a plugin archive
+* `-t`: If you specify an SSB build, this value will be given as SPTARGET
+
+You can specify multiple plugins and hotfixes by repeating the option, such as `./build.sh -m plugin1.zip -m plugin2.zip`.
+
+If you specify an SSB build, you do not need to specify any patches or hotfixes, since these are included in the build.
 
 ## Manually 
 
