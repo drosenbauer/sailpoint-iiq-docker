@@ -118,7 +118,28 @@ export PATH=$PATH:/opt/mssql-tools/bin
 mkdir -p /opt/tomcat/webapps/identityiq
 pushd /opt/tomcat/webapps/identityiq
 unzip -q /opt/iiq/identityiq.war
+for file in /opt/iiq/patch/*.jar
+do
+	echo "=> Including patch JAR $file"
+	unzip -q -o $file
+done
+for file in /opt/iiq/efix/*.jar
+do
+	echo "=> Including efix ZIP $file"
+	unzip -q -o $file
+done
 popd
+
+if [[ "${DATABASE_TYPE}" == "local" ]]
+then
+	DATABASE_TYPE=mysql
+	export MYSQL_HOST=localhost
+	export MYSQL_USER=identityiq
+	export MYSQL_PASSWORD=identityiq
+	export MYSQL_ROOT_PASSWORD=password
+	export MYSQL_DATABASE=identityiq
+	/mysql-local.sh
+fi
 
 if [[ "${DATABASE_TYPE}" == "mysql" ]]
 then

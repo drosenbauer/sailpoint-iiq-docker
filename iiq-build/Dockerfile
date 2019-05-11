@@ -1,5 +1,6 @@
 FROM tomcat:8.5
 
+LABEL maintainer="Devin Rosenbauer <devin@identityworksllc.com>"
 MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
 
 # Based on an original Dockerfile by Steffan Sperling, but modified beyond recognition!
@@ -37,18 +38,25 @@ COPY sql/target.sql /opt/sql/
 RUN mkdir -p /opt/iiq
 RUN mkdir -p /opt/iiq/imports
 RUN mkdir -p /opt/iiq/plugins
+RUN mkdir -p /opt/iiq/patch
+RUN mkdir -p /opt/iiq/efix
 
 COPY src/identityiq.war /opt/iiq/identityiq.war
 COPY src/imports/* /opt/iiq/imports/
 COPY src/plugins/* /opt/iiq/plugins/
+COPY src/patch/* /opt/iiq/patch/
+COPY src/efix/* /opt/iiq/efix/
 
 RUN mkdir -p /opt/tomcat/webapps/ROOT
 COPY index.html /opt/tomcat/webapps/ROOT
 
 COPY database-setup.mysql.sh /database-setup.mysql.sh
 COPY database-setup.mssql.sh /database-setup.mssql.sh
+COPY mysql-local.sh /mysql-local.sh
+COPY mysql-local-startup.sh /mysql-local-startup.sh
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /*.sh
+RUN chmod 755 /mysql-local-startup.sh
 
 ENV CATALINA_HOME /opt/tomcat
 ENV CATALINA_BASE /opt/tomcat
