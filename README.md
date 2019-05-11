@@ -116,6 +116,8 @@ By default, the Compose stack uses is Microsoft's `mssql:latest` image. This is 
 
 To switch to MySQL, you can change the `DATABASE_TYPE` environment variable in the compose file to `mysql`. The startup script will run appropriate database installation commands depending on the type you specify.
 
+If you start up a standalone container and a `DATABASE_TYPE` of `local`, an MySQL database will be installed in the IIQ container on startup.
+
 Services
 ========
 
