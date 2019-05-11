@@ -1,6 +1,18 @@
 Quick Start
 ===========
 
+# Standalone
+
+1.  Install Docker and Docker Compose.
+2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
+3.  `git clone <this repo>`
+4.  `cd sailpoint-docker`
+5.  `./build.sh -z /path/to/identityiq-7.3.zip`
+
+The image tagged `identityworksllc/sailpoint-iiq:latest` can be started standalone using the following Docker command:
+
+    docker run -it -eDATABASE_TYPE=local -p8080:8080 -d identityworksllc/sailpoint-iiq:latest
+
 # Compose
 
 On a Linux or Linux-like infrastructure:
