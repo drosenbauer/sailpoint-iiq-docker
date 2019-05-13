@@ -1,7 +1,7 @@
 Quick Start
 ===========
 
-# Standalone
+# Standalone (local mode)
 
 1.  Install Docker and Docker Compose.
 2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
@@ -12,6 +12,8 @@ Quick Start
 The image tagged `identityworksllc/sailpoint-iiq:latest` can be started standalone using the following Docker command:
 
     docker run -it -eDATABASE_TYPE=local -p8080:8080 -d identityworksllc/sailpoint-iiq:latest
+
+Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access.
 
 # Compose
 
