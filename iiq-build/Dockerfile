@@ -1,4 +1,4 @@
-FROM tomcat:8.5
+FROM tomcat:8.5-jre8
 
 LABEL maintainer="Devin Rosenbauer <devin@identityworksllc.com>"
 MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
@@ -9,7 +9,7 @@ RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
 # Install dependencies
 RUN apt-get update && \
-apt-get install -y apt-utils wget unzip tar mysql-client netcat curl openssh-server openssh-client supervisor openjdk-8-jdk nano less ldap-utils apt-transport-https
+apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat curl openssh-server openssh-client supervisor nano less ldap-utils apt-transport-https
 
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 RUN curl https://packages.microsoft.com/config/debian/9/prod.list | tee /etc/apt/sources.list.d/msprod.list
@@ -20,7 +20,6 @@ RUN apt-get install -y locales \
     && locale-gen
 	
 RUN ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
-
 
 # Move the default image location to the one this is expecting
 RUN mv /usr/local/tomcat /opt/tomcat
@@ -73,6 +72,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY healthcheck.sh /opt/healthcheck.sh
 RUN chmod +x /opt/healthcheck.sh
 HEALTHCHECK --start-period=120s --timeout=10s --interval=10s --retries=10 CMD /opt/healthcheck.sh
+
+# Default environment is a 'local' database for standalone-ness
+# Compose will override this
+ENV DATABASE_TYPE=local
 
 COPY src/bootstrap.ldif /bootstrap.ldif
 

@@ -55,6 +55,8 @@ configureMssqlProperties() {
 	
 	sed -ri -e "s/^dataSource.username\=.*/dataSource.username=${MSSQL_USER}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	sed -ri -e "s/^dataSource.password\=.*/dataSource.password=${MSSQL_PASS}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
+#	sed -ri -e "s/^pluginsDataSource.username\=.*/pluginsDataSource.username=${MSSQL_USER}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
+	sed -ri -e "s/^pluginsDataSource.password\=.*/pluginsDataSource.password=${MSSQL_PASS}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	
 	
 	# Add the new MSSQL properties 
