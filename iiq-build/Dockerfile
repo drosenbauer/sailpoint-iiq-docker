@@ -1,5 +1,6 @@
-FROM tomcat:8.5
+FROM tomcat:8.5-jre8
 
+LABEL maintainer="Devin Rosenbauer <devin@identityworksllc.com>"
 MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
 
 # Based on an original Dockerfile by Steffan Sperling, but modified beyond recognition!
@@ -8,7 +9,7 @@ RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
 # Install dependencies
 RUN apt-get update && \
-apt-get install -y apt-utils wget unzip tar mysql-client netcat curl openssh-server openssh-client supervisor openjdk-8-jdk nano less ldap-utils apt-transport-https
+apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat curl openssh-server openssh-client supervisor nano less ldap-utils apt-transport-https
 
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 RUN curl https://packages.microsoft.com/config/debian/9/prod.list | tee /etc/apt/sources.list.d/msprod.list
@@ -19,7 +20,6 @@ RUN apt-get install -y locales \
     && locale-gen
 	
 RUN ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
-
 
 # Move the default image location to the one this is expecting
 RUN mv /usr/local/tomcat /opt/tomcat
@@ -37,18 +37,25 @@ COPY sql/target.sql /opt/sql/
 RUN mkdir -p /opt/iiq
 RUN mkdir -p /opt/iiq/imports
 RUN mkdir -p /opt/iiq/plugins
+RUN mkdir -p /opt/iiq/patch
+RUN mkdir -p /opt/iiq/efix
 
 COPY src/identityiq.war /opt/iiq/identityiq.war
 COPY src/imports/* /opt/iiq/imports/
 COPY src/plugins/* /opt/iiq/plugins/
+COPY src/patch/* /opt/iiq/patch/
+COPY src/efix/* /opt/iiq/efix/
 
 RUN mkdir -p /opt/tomcat/webapps/ROOT
 COPY index.html /opt/tomcat/webapps/ROOT
 
 COPY database-setup.mysql.sh /database-setup.mysql.sh
 COPY database-setup.mssql.sh /database-setup.mssql.sh
+COPY mysql-local.sh /mysql-local.sh
+COPY mysql-local-startup.sh /mysql-local-startup.sh
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /*.sh
+RUN chmod 755 /mysql-local-startup.sh
 
 ENV CATALINA_HOME /opt/tomcat
 ENV CATALINA_BASE /opt/tomcat
@@ -65,6 +72,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY healthcheck.sh /opt/healthcheck.sh
 RUN chmod +x /opt/healthcheck.sh
 HEALTHCHECK --start-period=120s --timeout=10s --interval=10s --retries=10 CMD /opt/healthcheck.sh
+
+# Default environment is a 'local' database for standalone-ness
+# Compose will override this
+ENV DATABASE_TYPE=local
 
 COPY src/bootstrap.ldif /bootstrap.ldif
 

@@ -3,5 +3,7 @@
 iiq-build/src/identityiq.war
 iiq-build/src/plugins/*.zip
 iiq-build/src/imports/*.xml
+iiq-build/src/patch/
+iiq-build/src/efix/
 build/
 identityiq*.zip

@@ -7,7 +7,7 @@
 #   SKIP_DEMO_IMPORT
 
 #check if database schema is already there
-export DB_SCHEMA_VERSION=$(mysql -s -N -hdb -uroot -p${MYSQL_ROOT_PASSWORD} -e "select schema_version from identityiq.spt_database_version;")
+export DB_SCHEMA_VERSION=$(mysql -s -N -h${MYSQL_HOST} -uroot -p${MYSQL_ROOT_PASSWORD} -e "select schema_version from identityiq.spt_database_version;")
 if [ -z "$DB_SCHEMA_VERSION" ]
 then
 	echo "=> No schema present, creating IIQ schema in DB" 

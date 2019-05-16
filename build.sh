@@ -3,8 +3,10 @@
 source bin/include/utils.sh
 
 PLUGINS=()
+PATCHES=()
+HOTFIXES=()
 
-while getopts ":b:t:z:w:p:s" opt; do
+while getopts ":b:t:z:w:m:e:p:s1" opt; do
   case ${opt} in
     b ) SSB=${OPTARG}
       ;;
@@ -12,12 +14,20 @@ while getopts ":b:t:z:w:p:s" opt; do
       ;;
     z ) IIQ_ZIP=${OPTARG}
       ;;
-    p )
+    m )
       PLUGINS+=("${OPTARG}")
+      ;;
+    p )
+      PATCHES+=("${OPTARG}")
+      ;;
+    e )
+      HOTFIXES+=("${OPTARG}")
       ;;
     s ) SKIP_DEMO_COMPANY_DATA=y
       ;;
     w ) IIQ_WAR=${OPTARG}
+      ;;
+    1 ) ONE_FILE=y
       ;;
     \? ) echo "Usage: ./start.sh [-b <existing SSB build directory>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>]"
       ;;
@@ -170,15 +180,33 @@ fi
 
 cp ${BUILD}/identityiq.war iiq-build/src/
 
+mkdir -p iiq-build/src/patch
+mkdir -p iiq-build/src/efix
 mkdir -p iiq-build/src/plugins
+
+touch iiq-build/src/efix/.keep
+touch iiq-build/src/patch/.keep
+touch iiq-build/src/plugins/.keep
+
+for patch in "${PATCHES[@]}"
+do
+	greenecho " => Including patch archive $patch"
+	cp "$patch" "iiq-build/src/patch"
+done
+
+for efix in "${HOTFIXES[@]}"
+do
+	greenecho " => Including efix archive $efix"
+	cp "$efix" "iiq-build/src/efix"
+done
 
 for plugin in "${PLUGINS[@]}"
 do
+	greenecho " => Including plugin archive $plugin"
 	cp "$plugin" "iiq-build/src/plugins"
 done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
-
 docker-compose --log-level=ERROR build
 
 greenecho " => All done!"

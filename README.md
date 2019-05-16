@@ -1,6 +1,20 @@
 Quick Start
 ===========
 
+# Standalone (local mode)
+
+1.  Install Docker and Docker Compose.
+2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
+3.  `git clone <this repo>`
+4.  `cd sailpoint-docker`
+5.  `./build.sh -z /path/to/identityiq-7.3.zip`
+
+The image tagged `identityworksllc/sailpoint-iiq:latest` can be started standalone using the following Docker command:
+
+    docker run -it -eDATABASE_TYPE=local -p8080:8080 -d identityworksllc/sailpoint-iiq:latest
+
+Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access.
+
 # Compose
 
 On a Linux or Linux-like infrastructure:
@@ -32,15 +46,26 @@ On initial download, you will need to build the images in your local Docker envi
 
 ## With the provided build script
 
-You must specify the location of an IdentityIQ WAR using one of three flags:
+You must specify a way to obtain an identityiq.war using one of three flags:
 
 * `-z`: A local identityiq-7.x.zip
 * `-b`: An SSB build folder (or Git repository), which must contain a build.xml
 * `-w`: An already-built WAR file
 
-The WAR file will be copied to `iiq-build/src/identityiq.war`. 
+The WAR file will be staged to `iiq-build/src/identityiq.war`. 
 
 Once everything is staged, the build script will build the Docker images.
+
+Additional parameters:
+
+* `-p`: Specify the path to a JAR file for a major patch, such as 7.3p2
+* `-e`: Specify the path to a hotfix archive
+* `-m`: Specify the patch to a plugin archive
+* `-t`: If you specify an SSB build, this value will be given as SPTARGET
+
+You can specify multiple plugins and hotfixes by repeating the option, such as `./build.sh -m plugin1.zip -m plugin2.zip`.
+
+If you specify an SSB build, you do not need to specify any patches or hotfixes, since these are included in the build.
 
 ## Manually 
 
@@ -92,6 +117,8 @@ Database
 By default, the Compose stack uses is Microsoft's `mssql:latest` image. This is free for use in non-Production environments. The SA password is available in `docker-compose.yml`. 
 
 To switch to MySQL, you can change the `DATABASE_TYPE` environment variable in the compose file to `mysql`. The startup script will run appropriate database installation commands depending on the type you specify.
+
+If you start up a standalone container and a `DATABASE_TYPE` of `local`, an MySQL database will be installed in the IIQ container on startup.
 
 Services
 ========
