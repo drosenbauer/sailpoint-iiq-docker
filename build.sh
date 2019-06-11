@@ -2,6 +2,8 @@
 
 source bin/include/utils.sh
 
+mkdir -p build
+
 PLUGINS=()
 PATCHES=()
 HOTFIXES=()
@@ -183,6 +185,11 @@ cp ${BUILD}/identityiq.war iiq-build/src/
 mkdir -p iiq-build/src/patch
 mkdir -p iiq-build/src/efix
 mkdir -p iiq-build/src/plugins
+
+rm -f iiq-build/src/plugins/*.zip
+rm -f iiq-build/src/patch/*.jar
+rm -f iiq-build/src/efix/*.zip
+rm -f iiq-build/src/efix/*.jar
 
 touch iiq-build/src/efix/.keep
 touch iiq-build/src/patch/.keep
