@@ -4,7 +4,7 @@ Quick Start
 # Single container
 
 1.  Install Docker and Docker Compose.
-2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
+2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
 5.  `./build.sh -z /path/to/identityiq-7.3.zip`
@@ -20,7 +20,7 @@ Note that in local mode, the startup script will install and configure MySQL as 
 On a Linux or Linux-like infrastructure:
 
 1.  Install Docker and Docker Compose.
-2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
+2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
 5.  `./build.sh -z /path/to/identityiq-7.3.zip`
