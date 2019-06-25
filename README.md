@@ -28,6 +28,8 @@ On a Linux or Linux-like infrastructure:
 
 IIQ will now be available on port 8080.
 
+## Scaling
+
 To scale up, use a docker-compose command like `docker-compose up -d --scale iiq=3`, which will start 3 IIQ nodes. The nodes will use the `counter` and `done` services to fight for master status. The IIQ instances will name their Server objects `iiq1`, `iiq2`, etc, but this does not necessarily correspond to the replica labeling (`iiq_2`) in Docker.
 
 # Swarm
