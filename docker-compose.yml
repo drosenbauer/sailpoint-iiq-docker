@@ -1,5 +1,11 @@
 version: '3'
 services:
+  counter:
+    image: drosenbauer/docker-counter
+
+  done:
+    image: drosenbauer/docker-done
+
   ssh:
     build: ./ssh-host
     image: ssh-host
@@ -57,7 +63,7 @@ services:
     labels:
         - traefik.enable=false
 
-  iiq-master:
+  iiq:
     build: ./iiq-build
     image: identityworksllc/sailpoint-iiq
     environment:
@@ -72,8 +78,6 @@ services:
       - MYSQL_ROOT_PASSWORD=password
       - IIQ_VERSION=7.2
       - IIQ_PATCH=${IIQ_PATCH}
-    ports:
-      - 8880:8080
     depends_on:
       - db
       - mail
