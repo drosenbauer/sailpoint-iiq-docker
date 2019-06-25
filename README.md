@@ -1,7 +1,7 @@
 Quick Start
 ===========
 
-# Standalone (local mode)
+# Single container
 
 1.  Install Docker and Docker Compose.
 2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
@@ -15,7 +15,7 @@ The image tagged `identityworksllc/sailpoint-iiq:latest` can be started standalo
 
 Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access.
 
-# Compose
+# Compose (recommended)
 
 On a Linux or Linux-like infrastructure:
 
@@ -59,17 +59,17 @@ Once everything is staged, the build script will build the Docker images.
 Additional parameters:
 
 * `-p`: Specify the path to a JAR file for a major patch, such as 7.3p2
-* `-e`: Specify the path to a hotfix archive
-* `-m`: Specify the patch to a plugin archive
+* `-e`: Specify the path to an e-fix archive
+* `-m`: Specify the patch to a plugin archive (think "m" for "module")
 * `-t`: If you specify an SSB build, this value will be given as SPTARGET
 
-You can specify multiple plugins and hotfixes by repeating the option, such as `./build.sh -m plugin1.zip -m plugin2.zip`.
+You can specify multiple plugins and e-fixes by repeating the option, such as `./build.sh -m plugin1.zip -m plugin2.zip`.
 
 If you specify an SSB build, you do not need to specify any patches or hotfixes, since these are included in the build.
 
 ## Manually 
 
-Of course, you can copy a WAR file there manually and then invoke `docker-compose build` yourself.
+If you want to do it yourself or use a custom build, you can copy a WAR file to `iiq-build/src` manually and then invoke `docker-compose build`. This is ultimately what the build script  is doing behind the scenes.
 
 # Additional scripts
 
@@ -87,7 +87,7 @@ By default, with no parameters, you will enter the primary iiq-master container.
 
 ## Stopping
 
-To stop the container, use `./stop.sh`.
+To stop the stack, run `docker-compose down`.
 
 SSB
 ===
