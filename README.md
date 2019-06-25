@@ -30,7 +30,9 @@ IIQ will now be available on port 8080.
 
 ## Scaling
 
-To scale up, use a docker-compose command like `docker-compose up -d --scale iiq=3`, which will start 3 IIQ nodes. The nodes will use the `counter` and `done` services to fight for master status. The IIQ instances will name their Server objects `iiq1`, `iiq2`, etc, but this does not necessarily correspond to the replica labeling (`iiq_2`) in Docker.
+To scale IIQ, use a docker-compose command like `docker-compose up -d --scale iiq=3`, which will start 3 IIQ nodes. The nodes will use the `counter` and `done` services to fight for master status. The IIQ instances will name their Server objects `iiq1`, `iiq2`, etc, but this does not necessarily correspond to the replica labeling (`iiq_2`) in Docker.
+
+You can also scale at runtime using the same command after startup, which will add or remove nodes as needed. Note that the nodes added and removed are decided by Docker, not by their startup order or counter ID. This means that on scaling down, you may lose `iiq1` but keep `iiq2`.
 
 # Swarm
 
@@ -135,7 +137,7 @@ This Docker Compose file will start up several services:
 * ldap: OpenLDAP
 * ssh: An SSH server
 * lb2: The load balancer Traefik
-* iiq-master: IdentityIQ primary node
+* iiq: IdentityIQ nodes (which can be replicated ad nauseum)
 * counter and done: Utility services to assist with startup of the stateful IIQ services
 
 These should be sufficient to demonstrate most of the non-proprietary connectors in IIQ. The service names double as the hostnames from within the containers, so IIQ sees the database host as having DNS name `db`, LDAP as having the DNS name `ldap`, etc. 
