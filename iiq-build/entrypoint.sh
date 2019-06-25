@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 iiq() {
 	COMMAND=$1
@@ -155,11 +154,38 @@ fi
 
 chmod u+x /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq
 
-if [ ! -z "${IIQ_MASTER_NAME}" ]
+# Get ourselves a counter
+while [[ -z "${COUNTER}" ]]; do
+	COUNTER=`nc counter 12345`
+	sleep 1
+done
+
+echo "=> This node is iiq$COUNTER"
+NODE="iiq$COUNTER"
+
+export JAVA_OPTS="-Diiq.hostname=$NODE"
+
+if [[ "${COUNTER}" == "1" ]]
 then
-	echo "=> Waiting for iiq1 to come up"
-	while ! curl --output /dev/null --silent --head --fail http://${IIQ_MASTER_NAME}:8080; do sleep 1; done;
-	echo "=> iiq1 is up; resuming startup..."
+	MASTER=true
+	echo "=> This node with counter 1 is the master"
+fi
+
+if [ -z "${MASTER}" ]
+then
+	echo "=> Waiting for iiq1 to finish initialization"
+	sleep 10
+	UP=0
+	while [[ $UP == "0" ]]; do
+		ISDONE=`nc done 40001`
+		if [[ $ISDONE == "DONE" ]]; then
+			UP=1
+		else
+			echo "Still waiting..."
+		fi
+		sleep 10
+	done
+	echo "=> iiq1 is ready; resuming startup..."
 else
 	if [[ "${DATABASE_TYPE}" == "mysql" ]]
 	then	
@@ -169,7 +195,7 @@ else
 	fi
 fi
 
-if [ -z "${IIQ_MASTER_NAME}" ]
+if [ ! -z "${MASTER}" ]
 then
 	if [ -z "${SKIP_DEMO_IMPORT}" ]
 	then
@@ -180,9 +206,14 @@ then
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /opt/sql/target.sql
 		mysql -s -N -h${MYSQL_HOST} -uroot -p${MYSQL_ROOT_PASSWORD} -e "grant select on hr.* to 'identityiq';"
 	fi
+
+	# Import init.xml, etc
+	importIIQObjects;
+
+	# Flag the "done" service as done
+	nc done 40000
 fi
 
-importIIQObjects;
 
 /opt/tomcat/bin/catalina.sh run | tee -a /opt/tomcat/logs/catalina.out
 

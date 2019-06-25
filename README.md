@@ -1,10 +1,10 @@
 Quick Start
 ===========
 
-# Standalone (local mode)
+# Single container
 
 1.  Install Docker and Docker Compose.
-2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
+2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
 5.  `./build.sh -z /path/to/identityiq-7.3.zip`
@@ -15,18 +15,24 @@ The image tagged `identityworksllc/sailpoint-iiq:latest` can be started standalo
 
 Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access.
 
-# Compose
+# Compose (recommended)
 
 On a Linux or Linux-like infrastructure:
 
 1.  Install Docker and Docker Compose.
-2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/community/identityiq/downloads).
+2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
 5.  `./build.sh -z /path/to/identityiq-7.3.zip`
 6.  Start up a standalone stack with `docker-compose up -d`.
 
 IIQ will now be available on port 8080.
+
+## Scaling
+
+To scale IIQ, use a docker-compose command like `docker-compose up -d --scale iiq=3`, which will start 3 IIQ nodes. The nodes will use the `counter` and `done` services to fight for master status. The IIQ instances will name their Server objects `iiq1`, `iiq2`, etc, but this does not necessarily correspond to the replica labeling (`iiq_2`) in Docker.
+
+You can also scale at runtime using the same command after startup, which will add or remove nodes as needed. Note that the nodes added and removed are decided by Docker, not by their startup order or counter ID. This means that on scaling down, you may lose `iiq1` but keep `iiq2`.
 
 # Swarm
 
@@ -59,17 +65,17 @@ Once everything is staged, the build script will build the Docker images.
 Additional parameters:
 
 * `-p`: Specify the path to a JAR file for a major patch, such as 7.3p2
-* `-e`: Specify the path to a hotfix archive
-* `-m`: Specify the patch to a plugin archive
+* `-e`: Specify the path to an e-fix archive
+* `-m`: Specify the patch to a plugin archive (think "m" for "module")
 * `-t`: If you specify an SSB build, this value will be given as SPTARGET
 
-You can specify multiple plugins and hotfixes by repeating the option, such as `./build.sh -m plugin1.zip -m plugin2.zip`.
+You can specify multiple plugins and e-fixes by repeating the option, such as `./build.sh -m plugin1.zip -m plugin2.zip`.
 
 If you specify an SSB build, you do not need to specify any patches or hotfixes, since these are included in the build.
 
 ## Manually 
 
-Of course, you can copy a WAR file there manually and then invoke `docker-compose build` yourself.
+If you want to do it yourself or use a custom build, you can copy a WAR file to `iiq-build/src` manually and then invoke `docker-compose build`. This is ultimately what the build script  is doing behind the scenes.
 
 # Additional scripts
 
@@ -87,7 +93,7 @@ By default, with no parameters, you will enter the primary iiq-master container.
 
 ## Stopping
 
-To stop the container, use `./stop.sh`.
+To stop the stack, run `docker-compose down`.
 
 SSB
 ===
@@ -131,7 +137,8 @@ This Docker Compose file will start up several services:
 * ldap: OpenLDAP
 * ssh: An SSH server
 * lb2: The load balancer Traefik
-* iiq-master: IdentityIQ primary node
+* iiq: IdentityIQ nodes (which can be replicated ad nauseum)
+* counter and done: Utility services to assist with startup of the stateful IIQ services
 
 These should be sufficient to demonstrate most of the non-proprietary connectors in IIQ. The service names double as the hostnames from within the containers, so IIQ sees the database host as having DNS name `db`, LDAP as having the DNS name `ldap`, etc. 
 
