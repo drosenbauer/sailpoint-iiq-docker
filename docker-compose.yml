@@ -65,7 +65,7 @@ services:
 
   iiq:
     build: ./iiq-build
-    image: identityworksllc/sailpoint-iiq
+    image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:7.3p3
     environment:
       - DATABASE_TYPE=mssql
       - MSSQL_USER=identityiq
