@@ -22,6 +22,12 @@ services:
       - LDAP_ADMIN_PASSWORD=spadmin
     labels: 
         - traefik.enable=false
+  phpldapadmin:
+    image: osixia/phpldapadmin
+    ports: 
+      - 8443:443
+    environment:
+      - PHPLDAPADMIN_LDAP_HOSTS=ldap
 
   db:
     image: mcr.microsoft.com/mssql/server:2017-latest
@@ -48,9 +54,9 @@ services:
       - 1025:1025
       - "${MAILHOG_HTTP_PORT:-8025}:8025"
     labels:
-        - traefik.enable=false
+      - traefik.enable=false
 
-  lb2:
+  loadbalancer:
     image: traefik
     # Switch the following two commands for Swarm mode
     #command: --docker --docker.swarmMode --docker.domain=traefik --docker.watch --api --web
@@ -79,6 +85,8 @@ services:
       - IIQ_VERSION=7.2
       - IIQ_PATCH=${IIQ_PATCH}
     depends_on:
+      - done
+      - counter
       - db
       - mail
       - ldap
@@ -88,3 +96,27 @@ services:
         - traefik.docker.network=frontend
         - "traefik.frontend.rule=PathPrefix:/identityiq"
         - "traefik.backend.loadbalancer.sticky=true"
+
+  iiq-init:
+    image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:7.3p3
+    environment:
+      - DATABASE_TYPE=mssql
+      - MSSQL_USER=identityiq
+      - MSSQL_PASS=Id3ntityiq
+      - MSSQL_SA_PASSWORD=id3ntityIQ
+      - "MYSQL_HOST=db_mysql"
+      - MYSQL_USER=identityiq
+      - MYSQL_PASSWORD=identityiq
+      - MYSQL_DATABASE=identityiq
+      - MYSQL_ROOT_PASSWORD=password
+      - IIQ_VERSION=7.2
+      - IIQ_PATCH=${IIQ_PATCH}
+      - INIT=y
+    depends_on:
+      - done
+      - db
+      - mail
+      - ldap
+    deploy:
+      restart_policy:
+        condition: none
