@@ -13,7 +13,7 @@ The image tagged `latest` can be started standalone using the following Docker c
 
     docker run -it -p8080:8080 git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
 
-Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access.
+Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access. If you're following the logs, you will notice the MySQL database start up and then shut down again. This is intended to do some initialization of database files and is normal.
 
 # Compose (recommended)
 
