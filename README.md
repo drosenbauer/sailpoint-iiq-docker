@@ -9,9 +9,9 @@ Quick Start
 4.  `cd sailpoint-docker`
 5.  `./build.sh -z /path/to/identityiq-7.3.zip`
 
-The image tagged `identityworksllc/sailpoint-iiq:latest` can be started standalone using the following Docker command:
+The image tagged `latest` can be started standalone using the following Docker command:
 
-    docker run -it -p8080:8080 -d identityworksllc/sailpoint-iiq:latest
+    docker run -it -p8080:8080 git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
 
 Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access.
 
