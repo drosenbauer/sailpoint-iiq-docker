@@ -11,7 +11,7 @@ Quick Start
 
 The image tagged `latest` can be started standalone using the following Docker command:
 
-    docker run -it -p8080:8080 git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
+    docker run -it -d -p8080:8080 git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
 
 Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access. 
 
