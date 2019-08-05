@@ -74,6 +74,8 @@ services:
     image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:7.3p3
     environment:
       - DATABASE_TYPE=mssql
+      - MSSQL_HOST=db
+      - MSSQL_SA_USER=SA
       - MSSQL_USER=identityiq
       - MSSQL_PASS=Id3ntityiq
       - MSSQL_SA_PASSWORD=id3ntityIQ
@@ -101,6 +103,8 @@ services:
     image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:7.3p3
     environment:
       - DATABASE_TYPE=mssql
+      - MSSQL_HOST=db
+      - MSSQL_SA_USER=SA
       - MSSQL_USER=identityiq
       - MSSQL_PASS=Id3ntityiq
       - MSSQL_SA_PASSWORD=id3ntityIQ

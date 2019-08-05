@@ -60,12 +60,12 @@ configureMssqlProperties() {
 	
 	# Add the new MSSQL properties 
 	echo """
-dataSource.url=jdbc:sqlserver://db:1433;databaseName=identityiq;
+dataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiq;
 dataSource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
 sessionFactory.hibernateProperties.hibernate.dialect=sailpoint.persistence.SQLServerPagingDialect
 scheduler.quartzProperties.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.MSSQLDelegate
 scheduler.quartzProperties.org.quartz.jobStore.selectWithLockSQL=SELECT * FROM {0}LOCKS UPDLOCK WHERE LOCK_NAME = ?
-pluginsDataSource.url=jdbc:sqlserver://db:1433;databaseName=identityiqPlugin
+pluginsDataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiqPlugin
 pluginsDataSource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
 """ >> ${PROPS}
 }
