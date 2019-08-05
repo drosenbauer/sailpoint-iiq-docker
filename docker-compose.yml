@@ -71,7 +71,7 @@ services:
 
   iiq:
     build: ./iiq-build
-    image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
+    image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:${TAG-latest}
     environment:
       - DATABASE_TYPE=mssql
       - MSSQL_HOST=db
@@ -100,7 +100,7 @@ services:
         - "traefik.backend.loadbalancer.sticky=true"
 
   iiq-init:
-    image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
+    image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:${TAG:-latest}
     environment:
       - DATABASE_TYPE=mssql
       - MSSQL_HOST=db
