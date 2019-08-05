@@ -15,6 +15,8 @@ The image tagged `latest` can be started standalone using the following Docker c
 
 Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access. 
 
+Standalone startup takes about 4 minutes on my machine, including the database installation and initial configuration.
+
 ## Oddities that are okay
 
 If you're following the logs, you will notice the MySQL database start up and then shut down again. This is intended to do some initialization of database files and is normal.
