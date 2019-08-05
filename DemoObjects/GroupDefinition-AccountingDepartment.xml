@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE GroupDefinition PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<GroupDefinition indexed="true" name="Accounting Department" private="true">
+	<Description />
+	<GroupFilter>
+		<CompositeFilter operation="OR">
+			<Filter matchMode="START" operation="LIKE" property="jobTitle" value="Account" />
+			<Filter matchMode="START" operation="LIKE" property="jobTitle" value="Book" />
+		</CompositeFilter>
+	</GroupFilter>
+	<Index>
+		<Reference class="sailpoint.object.GroupIndex" name="Accounting Department" />
+	</Index>
+	<Owner>
+		<Reference class="sailpoint.object.Identity" name="spadmin" />
+	</Owner>
+</GroupDefinition>
