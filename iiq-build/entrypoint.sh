@@ -34,9 +34,11 @@ configureMysqlProperties() {
 	PROPS=/opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 
 	# Create plugin datasource if necessary
-	export PLUGINDB=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep url | awk -F "/" ' { print $4 } ' | awk -F "?" ' {print $1} '`
-	export PLUGINUSER=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep username | awk -F "=" ' { print $2 } '`
-	export PLUGINPASS=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep password | awk -F "=" ' { print $2 } '`
+	if [[ -z "${PLUGINPASS}" ]]; then
+		export PLUGINDB=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep url | awk -F "/" ' { print $4 } ' | awk -F "?" ' {print $1} '`
+		export PLUGINUSER=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep username | awk -F "=" ' { print $2 } '`
+		export PLUGINPASS=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep password | awk -F "=" ' { print $2 } '`
+	fi
 	
 	cat /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	echo "=> Done configuring iiq.properties!"
@@ -140,6 +142,9 @@ then
 	export MYSQL_PASSWORD=identityiq
 	export MYSQL_ROOT_PASSWORD=password
 	export MYSQL_DATABASE=identityiq
+	export PLUGINDB=identityiqPlugin
+	export PLUGINUSER=identityiqPlugin
+	export PLUGINPASS=identityiqPlugin
 	/mysql-local.sh
 fi
 
@@ -157,19 +162,19 @@ chmod u+x /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq
 
 if [[ -z "${INIT}" ]]
 then
-	# Get ourselves a counter
-	while [[ -z "${COUNTER}" ]]; do
-		COUNTER=`nc counter 12345`
-		sleep 1
-	done
-
-	echo "=> This node is iiq$COUNTER"
-	export NODE="iiq$COUNTER"
-
-	export JAVA_OPTS="-Diiq.hostname=$NODE"
-
 	if [[ -z "${INIT_LOCAL}" ]]
 	then
+		# Get ourselves a counter
+		while [[ -z "${COUNTER}" ]]; do
+			COUNTER=`nc counter 12345`
+			sleep 1
+		done
+
+		echo "=> This node is iiq$COUNTER"
+		export NODE="iiq$COUNTER"
+
+		export JAVA_OPTS="-Diiq.hostname=$NODE"
+
 		echo "=> Waiting for the init container to finish initialization"
 		sleep 10
 		UP=0
@@ -183,6 +188,8 @@ then
 			sleep 10
 		done
 		echo "=> Database is ready; resuming startup..."
+	else
+		export JAVA_OPTS="$JAVA_OPTS -Diiq.hostname=iiq1"
 	fi
 fi
 
@@ -208,8 +215,11 @@ then
 	# Import init.xml, etc
 	importIIQObjects;
 
-	# Flag the "done" service as done
-	nc done 40000
+	# Done service will only exist in the swarm context
+	if [[ -z "${INIT_LOCAL}" ]]; then
+		# Flag the "done" service as done
+		nc done 40000
+	fi
 fi
 
 if [[ -z "${INIT}" ]] || [[ ! -z "${INIT_LOCAL}" ]]
