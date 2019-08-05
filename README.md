@@ -13,7 +13,18 @@ The image tagged `latest` can be started standalone using the following Docker c
 
     docker run -it -p8080:8080 git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
 
-Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access. If you're following the logs, you will notice the MySQL database start up and then shut down again. This is intended to do some initialization of database files and is normal.
+Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access. 
+
+## Oddities that are okay
+
+If you're following the logs, you will notice the MySQL database start up and then shut down again. This is intended to do some initialization of database files and is normal.
+
+You will also see errors and warnings like this indicating that the other build services are unavailable. These can be safely ignored.
+
+* `ldap_sasl_bind(SIMPLE): Can't contact LDAP server (-1)`
+* `mysql: [Warning] Using a password on the command line interface can be insecure.`
+* `ERROR 1146 (42S02) at line 1: Table 'identityiq.spt_database_version' doesn't exist`
+* `ls: cannot access '/opt/iiq/plugins/*.zip': No such file or directory`
 
 # Compose (recommended)
 
