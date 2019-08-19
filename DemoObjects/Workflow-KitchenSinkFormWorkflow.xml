@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Workflow PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Workflow explicitTransitions="true" name="Kitchen Sink Form Workflow" type="LCMProvisioning">
+          
+    
+    <Variable input="true" name="launcher"/>
+          
+    
+    <Variable input="true" name="quickLinkIdentityId"/>
+          
+    
+    <Variable input="true" name="identityName">
+                    
+        
+        <Script>
+                              
+            
+            <Source>
+                                
+                <![CDATA[        
+        import sailpoint.object.Identity;
+        
+        Identity id = null;
+        if (quickLinkIdentityId != null) {
+        	id = context.getObject(Identity.class, quickLinkIdentityId);
+        }
+        
+        if (id != null) {
+        	return id.getName();
+        }
+        return "";]]>
+                            
+            </Source>
+                            
+        
+        </Script>
+                  
+    
+    </Variable>
+          
+    
+    <Variable initializer="script:return new HashMap()" name="modelMap">
+                    
+        
+        <Script>
+                              
+            
+            <Source>
+                                
+                <![CDATA[
+        
+				Map theMap = new HashMap();
+				theMap.put("transformerClass", "sailpoint.transformer.IdentityTransformer");
+				theMap.put("transformerOptions", new HashMap());
+        return theMap;
+				
+      ]]>
+                            
+            </Source>
+                            
+        
+        </Script>
+                  
+    
+    </Variable>
+          
+    
+    <Step icon="Start" name="Start" posX="125" posY="86">
+                    
+        
+        <Transition to="Generic Step"/>
+                  
+    
+    </Step>
+          
+    
+    <Step icon="Default" name="Generic Step" posX="386" posY="109">
+                    
+        
+        <Approval name="Kitchen Sink Form" owner="ref:launcher" return="modelMap" send="modelMap">
+                              
+            
+            <Arg name="workItemFormBasePath" value="modelMap"/>
+                              
+            
+            <Form name="Kitchen Sink Form">
+                                        
+                
+                <Attributes>
+                                                  
+                    
+                    <Map>
+                                                            
+                        
+                        <entry key="pageTitle" value="Kitchen Sink Form"/>
+                                                          
+                    
+                    </Map>
+                                                
+                
+                </Attributes>
+                                        
+                
+                <Description>All the stuff</Description>
+                                        
+                
+                <Section columns="2" name="Some Fields">
+                                                  
+                    
+                    <Field columnSpan="2" displayName="Text Field" name="textField" type="string"/>
+                                                  
+                    
+                    <Field columnSpan="2" name="selectField" type="string">
+                                                            
+                        
+                        <AllowedValuesDefinition>
+                                                                      
+                            
+                            <Value>
+                                                                                
+                                
+                                <List>
+                                                                                          
+                                    
+                                    <String>A</String>
+                                                                                          
+                                    
+                                    <String>B</String>
+                                                                                          
+                                    
+                                    <String>C</String>
+                                                                                        
+                                
+                                </List>
+                                                                              
+                            
+                            </Value>
+                                                                    
+                        
+                        </AllowedValuesDefinition>
+                                                          
+                    
+                    </Field>
+                                                  
+                    
+                    <Field columnSpan="2" name="dateField" type="date"/>
+                                                  
+                    
+                    <Field columnSpan="2" name="booleanField" postBack="true" type="boolean"/>
+                                                  
+                    
+                    <Field columnSpan="2" name="identityField" type="sailpoint.object.Identity"/>
+                                                  
+                    
+                    <Field columnSpan="2" name="roleField" type="Bundle"/>
+                                                  
+                    
+                    <Field columnSpan="2" name="passwordField" type="secret"/>
+                                                  
+                    
+                    <Field columnSpan="1" multi="true" name="leftField" type="string"/>
+                                                  
+                    
+                    <Field columnSpan="1" multi="true" name="rightField" type="string">
+                                                            
+                        
+                        <AllowedValuesDefinition>
+                                                                      
+                            
+                            <Value>
+                                                                                
+                                
+                                <List>
+                                                                                          
+                                    
+                                    <String>A</String>
+                                                                                          
+                                    
+                                    <String>B</String>
+                                                                                          
+                                    
+                                    <String>C</String>
+                                                                                        
+                                
+                                </List>
+                                                                              
+                            
+                            </Value>
+                                                                    
+                        
+                        </AllowedValuesDefinition>
+                                                          
+                    
+                    </Field>
+                                                  
+                    
+                    <Field columnSpan="2" dynamic="true" name="dynamicValueField" postBack="true" type="string">
+                                                            
+                        
+                        <Script>
+                                                                      
+                            
+                            <Source>
+                                                                
+                                <![CDATA[System.out.println("In the value script = " + field.getValue());
+return field.getValue()]]>
+                                                            
+                            </Source>
+                                                                    
+                        
+                        </Script>
+                                                            
+                        
+                        <ValidationScript>
+                                                                      
+                            
+                            <Source>
+                                                                
+                                <![CDATA[System.out.println("In the validation script = " + field.getValue());]]>
+                                                            
+                            </Source>
+                                                                    
+                        
+                        </ValidationScript>
+                                                          
+                    
+                    </Field>
+                                                
+                
+                </Section>
+                                        
+                
+                <Button action="back" label="Back"/>
+                                        
+                
+                <Button action="next" label="Next"/>
+                                        
+                
+                <Button action="cancel" label="Cancel"/>
+                                      
+            
+            </Form>
+                            
+        
+        </Approval>
+                    
+        
+        <Transition to="Stop"/>
+                  
+    
+    </Step>
+          
+    
+    <Step icon="Stop" name="Stop" posX="696" posY="105"/>
+        
+
+</Workflow>
