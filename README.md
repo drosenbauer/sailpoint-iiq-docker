@@ -28,7 +28,18 @@ You will also see errors and warnings like this indicating that the other build 
 * `ERROR 1146 (42S02) at line 1: Table 'identityiq.spt_database_version' doesn't exist`
 * `ls: cannot access '/opt/iiq/plugins/*.zip': No such file or directory`
 
-# Compose (recommended)
+# Compose with a pre-built image
+
+On a Linux or Linux-like infrastructure:
+
+* Install Docker and Docker Compose (or Docker for Mac/Windows)
+* Authenticate to the internal IDW Docker registry
+* Grab the docker-compose.yml file from [this snippet](https://git.identityworksllc.com/idw/idw-sailpoint/sailpoint-docker/snippets/16) and save it locally
+* Go to that directory and run `docker-compose up -d`
+
+The `latest` tag in the registry refers to 7.3p3, so that will be the default version started.
+
+# Compose with build (recommended)
 
 On a Linux or Linux-like infrastructure:
 
