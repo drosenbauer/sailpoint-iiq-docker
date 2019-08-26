@@ -7,8 +7,7 @@ services:
     image: drosenbauer/docker-done
 
   ssh:
-    build: ./ssh-host
-    image: ssh-host
+    image: drosenbauer/docker-ssh-host
     labels:
       - traefik.enable=false
 
