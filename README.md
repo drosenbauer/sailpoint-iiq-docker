@@ -1,6 +1,13 @@
 Quick Start
 ===========
 
+There are several of ways to start your Docker environment:
+
+* [A single-container build](#single-container)
+* [A pre-built full stack](#compose-with-a-pre-built-image) (recommended for OOB)
+* [Building your own full stack](#compose-with-build-recommended) (recommended for customizations)
+* [Swarm mode](#swarm)
+
 # Single container
 
 1.  Install Docker and Docker Compose.
