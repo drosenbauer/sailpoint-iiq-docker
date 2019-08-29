@@ -7,6 +7,7 @@ mkdir -p build
 PLUGINS=()
 PATCHES=()
 HOTFIXES=()
+TRUSTEDCERTS=()
 
 while getopts ":b:t:z:w:m:e:p:s1" opt; do
   case ${opt} in
@@ -15,6 +16,9 @@ while getopts ":b:t:z:w:m:e:p:s1" opt; do
     t ) SPTARGET=${OPTARG}
       ;;
     z ) IIQ_ZIP=${OPTARG}
+      ;;
+    c )
+      TRUSTEDCERTS+=("${OPTARG}")
       ;;
     m )
       PLUGINS+=("${OPTARG}")
@@ -185,6 +189,7 @@ cp ${BUILD}/identityiq.war iiq-build/src/
 mkdir -p iiq-build/src/patch
 mkdir -p iiq-build/src/efix
 mkdir -p iiq-build/src/plugins
+mkdir -p iiq-build/src/certs
 
 rm -f iiq-build/src/plugins/*.zip
 rm -f iiq-build/src/patch/*.jar
@@ -194,6 +199,7 @@ rm -f iiq-build/src/efix/*.jar
 touch iiq-build/src/efix/.keep
 touch iiq-build/src/patch/.keep
 touch iiq-build/src/plugins/.keep
+touch iiq-build/src/certs/.keep
 
 for patch in "${PATCHES[@]}"
 do
@@ -211,6 +217,12 @@ for plugin in "${PLUGINS[@]}"
 do
 	greenecho " => Including plugin archive $plugin"
 	cp "$plugin" "iiq-build/src/plugins"
+done
+
+for cert in "${TRUSTEDCERTS[@]}"
+do
+	greenecho " => Including trusted SSL certificate $cert"
+	cp "$cert" "iiq-build/src/certs"
 done
 
 greenecho " => Building Docker containers, please wait a minute or two..."

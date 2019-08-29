@@ -11,7 +11,7 @@ This data represents an imaginary medium-sized grocery store corporation.
 
 Requirements used by the generator follow:
 
-* There are around 33,000 full and part time employees.
+* There are around 5,600 full and part time employees.
 * There are two affiliate companies (Primary Grocers Inc and Affiliate Grocers Inc) which have separate manager hierarchies and locations. 
 * A few people may have a record at more than one company. For example, Jim worked as a cashier at Affiliate then quit, then later took a job at Primary. 
 * Users will have no more than one record per company.
@@ -27,6 +27,6 @@ The dataset includes an `ssn` field with SSN-formatted randomly generated values
 
 # Additional datasets
 
-Additional larger or smaller ramdomly generated user sets are available on request. 
+Additional larger or smaller randomly generated user sets are available on request. 
 
-We also have generated university datasets with users having multiple valid affiliations.
+We also have generated university datasets with users having multiple valid affiliations, class and degree history, etc.

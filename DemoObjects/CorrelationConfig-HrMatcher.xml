@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE CorrelationConfig PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<CorrelationConfig name="HR Matcher">
+	<AttributeAssignments>
+		<Filter operation="EQ" property="name" value="employee_number" />
+	</AttributeAssignments>
+</CorrelationConfig>

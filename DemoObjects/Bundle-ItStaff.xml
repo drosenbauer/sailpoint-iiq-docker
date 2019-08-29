@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Bundle PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Bundle name="IT Staff" type="business">
+	<ActivityConfig allEnabled="true" />
+	<Attributes>
+		<Map>
+			<entry key="accountSelectorRules" />
+			<entry key="allowDuplicateAccounts" value="false" />
+			<entry key="allowMultipleAssignments" value="false" />
+			<entry key="mergeTemplates" value="false" />
+			<entry key="sysDescriptions">
+				<value>
+					<Map>
+						<entry key="en_US" />
+					</Map>
+				</value>
+			</entry>
+		</Map>
+	</Attributes>
+	<Owner>
+		<Reference class="sailpoint.object.Identity" name="spadmin" />
+	</Owner>
+	<Requirements>
+		<Reference class="sailpoint.object.Bundle" name="IT Staff Linux Groups" />
+		<Reference class="sailpoint.object.Bundle" name="IT Staff LDAP Groups" />
+	</Requirements>
+	<Selector>
+		<IdentitySelector>
+			<PopulationRef>
+				<Reference class="sailpoint.object.GroupDefinition" name="IT Staff Population" />
+			</PopulationRef>
+		</IdentitySelector>
+	</Selector>
+</Bundle>

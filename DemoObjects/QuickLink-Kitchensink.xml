@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE QuickLink PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<QuickLink action="workflow" category="Manage" messageKey="Kitchen Sink" name="KitchenSink">
+	<Attributes>
+		<Map>
+			<entry key="workflowName" value="Kitchen Sink Form Workflow" />
+			<entry key="timezoneHack">
+				<value>
+					<Script>
+						<Source>
+				            <![CDATA[
+				              import javax.faces.context.FacesContext;
+				              import javax.servlet.http.HttpSession;
+				              import sailpoint.web.WorkflowSessionWebUtil;
+				              import sailpoint.api.WorkflowSession;
+				              import sailpoint.object.Identity;
+				              
+				              FacesContext fc = FacesContext.getCurrentInstance();
+				              HttpSession session = fc.getExternalContext().getSession(true);
+				              TimeZone tz = session.getAttribute("timeZone");
+				              if (tz != null) {
+				                String username = session.getAttribute("principal");
+				              	Identity theUser = context.getObjectByName(Identity.class, username);
+				              	theUser.setAttribute("lastTimeZone", tz.getID());
+				              	context.saveObject(theUser);
+				              	context.commitTransaction();
+				              }
+				              ]]>
+						</Source>
+					</Script>
+				</value>
+			</entry>
+		</Map>
+	</Attributes>
+	<QuickLinkOptions allowOther="true">
+		<DynamicScopeRef>
+			<Reference class="sailpoint.object.DynamicScope" name="Everyone" />
+		</DynamicScopeRef>
+	</QuickLinkOptions>
+</QuickLink>
