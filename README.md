@@ -1,3 +1,7 @@
+Table of contents
+=================
+
+
 Quick Start
 ===========
 
@@ -56,7 +60,7 @@ On a Linux or Linux-like infrastructure:
 2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
-5.  `./build.sh -z /path/to/identityiq-7.3.zip`
+5.  `./build.sh -z /path/to/identityiq-7.3.zip -p /path/to/identityiq-7.3p3.jar` (for example)
 6.  Start up a standalone stack with `docker-compose up -d`.
 
 IIQ will now be available on port 8080.
@@ -80,16 +84,16 @@ If you would like to run in Swarm Mode, you will need to make a couple changes t
 
 If you are interested in Swarm, I trust that you otherwise know what you're doing.
 
-Usage
-=====
+Build details
+=============
 
 # Building
 
-On initial download, you will need to build the images in your local Docker environment. 
+On initial download, you will need to build the images in your local Docker environment. We cannot ship our Docker configuration with IdentityIQ components and your installation may have its own build process. Therefore, we've provided a build script that will automatically place the appropriate artifacts in the appropriate locations.
 
 ## With the provided build script
 
-You must specify a way to obtain an identityiq.war using one of three flags:
+You must specify a way to obtain an identityiq.war using one of these three flags:
 
 * `-z`: A local identityiq-7.x.zip
 * `-b`: An SSB build folder (or Git repository), which must contain a build.xml
@@ -113,7 +117,14 @@ If you specify an SSB build, you do not need to specify any patches or hotfixes,
 
 ## Manually 
 
-If you want to do it yourself or use a custom build, you can copy a WAR file to `iiq-build/src` manually and then invoke `docker-compose build`. This is ultimately what the build script  is doing behind the scenes.
+If you want to do it yourself or use a custom build, you can copy a WAR file to `iiq-build/src` manually and then invoke `docker-compose build`. This is ultimately what the build script is doing behind the scenes.
+
+There are other folders in `iiq-build/src` that you can add artifacts to as needed: 
+
+* `patch`: For a patch JAR file (only one please)
+* `efix`: For hotfix zip files
+* `plugins`: For plugin zip files
+* `certs`: For certificates to import
 
 # Additional scripts
 
