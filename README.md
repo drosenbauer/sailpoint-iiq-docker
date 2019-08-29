@@ -37,6 +37,8 @@ You will also see errors and warnings like this indicating that the other build 
 
 # Compose with a pre-built image
 
+**This option is for Identity Works internal use only. Sorry.**
+
 On a Linux or Linux-like infrastructure:
 
 * Install Docker and Docker Compose (or Docker for Mac/Windows)
