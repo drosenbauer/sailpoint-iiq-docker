@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE GroupDefinition PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<GroupDefinition indexed="true" name="IT Staff Population" private="true">
+	<Description />
+	<GroupFilter>
+		<CompositeFilter operation="OR">
+			<Filter matchMode="ANYWHERE" operation="LIKE" property="jobTitle" value="Developer" />
+			<Filter matchMode="ANYWHERE" operation="LIKE" property="jobTitle" value="DBA" />
+			<Filter matchMode="ANYWHERE" operation="LIKE" property="jobTitle" value="Computer" />
+			<Filter matchMode="ANYWHERE" operation="LIKE" property="jobTitle" value="Engineer" />
+		</CompositeFilter>
+	</GroupFilter>
+	<Owner>
+		<Reference class="sailpoint.object.Identity" name="spadmin" />
+	</Owner>
+</GroupDefinition>

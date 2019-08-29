@@ -6,4 +6,4 @@ else
 	FILE=docker-compose.yml
 fi
 
-docker-compose logs -f "$@"
+docker-compose logs --tail=20 -f "$@"

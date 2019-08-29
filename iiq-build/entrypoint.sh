@@ -34,9 +34,11 @@ configureMysqlProperties() {
 	PROPS=/opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 
 	# Create plugin datasource if necessary
-	export PLUGINDB=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep url | awk -F "/" ' { print $4 } ' | awk -F "?" ' {print $1} '`
-	export PLUGINUSER=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep username | awk -F "=" ' { print $2 } '`
-	export PLUGINPASS=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep password | awk -F "=" ' { print $2 } '`
+	if [[ -z "${PLUGINPASS}" ]]; then
+		export PLUGINDB=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep url | awk -F "/" ' { print $4 } ' | awk -F "?" ' {print $1} '`
+		export PLUGINUSER=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep username | awk -F "=" ' { print $2 } '`
+		export PLUGINPASS=`grep pluginsDataSource ${PROPS} | grep -v "#" | grep password | awk -F "=" ' { print $2 } '`
+	fi
 	
 	cat /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	echo "=> Done configuring iiq.properties!"
@@ -60,12 +62,12 @@ configureMssqlProperties() {
 	
 	# Add the new MSSQL properties 
 	echo """
-dataSource.url=jdbc:sqlserver://db:1433;databaseName=identityiq;
+dataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiq;
 dataSource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
 sessionFactory.hibernateProperties.hibernate.dialect=sailpoint.persistence.SQLServerPagingDialect
 scheduler.quartzProperties.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.MSSQLDelegate
 scheduler.quartzProperties.org.quartz.jobStore.selectWithLockSQL=SELECT * FROM {0}LOCKS UPDLOCK WHERE LOCK_NAME = ?
-pluginsDataSource.url=jdbc:sqlserver://db:1433;databaseName=identityiqPlugin
+pluginsDataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiqPlugin
 pluginsDataSource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
 """ >> ${PROPS}
 }
@@ -133,12 +135,16 @@ popd
 
 if [[ "${DATABASE_TYPE}" == "local" ]]
 then
+	INIT_LOCAL=1
 	DATABASE_TYPE=mysql
 	export MYSQL_HOST=localhost
 	export MYSQL_USER=identityiq
 	export MYSQL_PASSWORD=identityiq
 	export MYSQL_ROOT_PASSWORD=password
 	export MYSQL_DATABASE=identityiq
+	export PLUGINDB=identityiqPlugin
+	export PLUGINUSER=identityiqPlugin
+	export PLUGINPASS=identityiqPlugin
 	/mysql-local.sh
 fi
 
@@ -154,49 +160,48 @@ fi
 
 chmod u+x /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq
 
-# Get ourselves a counter
-while [[ -z "${COUNTER}" ]]; do
-	COUNTER=`nc counter 12345`
-	sleep 1
-done
-
-echo "=> This node is iiq$COUNTER"
-NODE="iiq$COUNTER"
-
-export JAVA_OPTS="-Diiq.hostname=$NODE"
-
-if [[ "${COUNTER}" == "1" ]]
+if [[ -z "${INIT}" ]]
 then
-	MASTER=true
-	echo "=> This node with counter 1 is the master"
+	if [[ -z "${INIT_LOCAL}" ]]
+	then
+		# Get ourselves a counter
+		while [[ -z "${COUNTER}" ]]; do
+			COUNTER=`nc counter 12345`
+			sleep 1
+		done
+
+		echo "=> This node is iiq$COUNTER"
+		export NODE="iiq$COUNTER"
+
+		export JAVA_OPTS="-Diiq.hostname=$NODE"
+
+		echo "=> Waiting for the init container to finish initialization"
+		sleep 10
+		UP=0
+		while [[ $UP == "0" ]]; do
+			ISDONE=`nc done 40001`
+			if [[ $ISDONE == "DONE" ]]; then
+				UP=1
+			else
+				echo "Still waiting..."
+			fi
+			sleep 10
+		done
+		echo "=> Database is ready; resuming startup..."
+	else
+		export JAVA_OPTS="$JAVA_OPTS -Diiq.hostname=iiq1"
+	fi
 fi
 
-if [ -z "${MASTER}" ]
+if [[ ! -z "${INIT}" ]] || [[ ! -z "${INIT_LOCAL}" ]]
 then
-	echo "=> Waiting for iiq1 to finish initialization"
-	sleep 10
-	UP=0
-	while [[ $UP == "0" ]]; do
-		ISDONE=`nc done 40001`
-		if [[ $ISDONE == "DONE" ]]; then
-			UP=1
-		else
-			echo "Still waiting..."
-		fi
-		sleep 10
-	done
-	echo "=> iiq1 is ready; resuming startup..."
-else
 	if [[ "${DATABASE_TYPE}" == "mysql" ]]
 	then	
 		/database-setup.mysql.sh
 	else
 		/database-setup.mssql.sh
 	fi
-fi
 
-if [ ! -z "${MASTER}" ]
-then
 	if [ -z "${SKIP_DEMO_IMPORT}" ]
 	then
 		echo "=> Importing dummy company data for HR"
@@ -210,10 +215,17 @@ then
 	# Import init.xml, etc
 	importIIQObjects;
 
-	# Flag the "done" service as done
-	nc done 40000
+	# Done service will only exist in the swarm context
+	if [[ -z "${INIT_LOCAL}" ]]; then
+		# Flag the "done" service as done
+		nc done 40000
+	fi
 fi
 
-
-/opt/tomcat/bin/catalina.sh run | tee -a /opt/tomcat/logs/catalina.out
-
+if [[ -z "${INIT}" ]] || [[ ! -z "${INIT_LOCAL}" ]]
+then
+	# Start up Tomcat if not the init container *or* if we're doing a local build
+	/opt/tomcat/bin/catalina.sh run | tee -a /opt/tomcat/logs/catalina.out
+else
+	echo "=> Initialization complete, exiting!"
+fi
