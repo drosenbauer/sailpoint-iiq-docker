@@ -21,6 +21,7 @@ services:
       - LDAP_ADMIN_PASSWORD=spadmin
     labels: 
         - traefik.enable=false
+
   phpldapadmin:
     image: osixia/phpldapadmin
     ports: 
@@ -56,7 +57,7 @@ services:
       - traefik.enable=false
 
   loadbalancer:
-    image: traefik
+    image: traefik:1.7
     # Switch the following two commands for Swarm mode
     #command: --docker --docker.swarmMode --docker.domain=traefik --docker.watch --api --web
     command: --api --docker --web --logLevel=DEBUG
