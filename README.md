@@ -8,6 +8,7 @@ Table of contents
 
 **Additional documentation**
 
+* [Where are the logs?](#where-are-the-logs)
 * [Additional Scripts](#additional-scripts)
 * [SSB](#ssb)
 * [Database](#database)
