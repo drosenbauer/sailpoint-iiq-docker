@@ -141,13 +141,16 @@ There are other folders in `iiq-build/src` that you can add artifacts to as need
 * `plugins`: For plugin zip files
 * `certs`: For certificates to import
 
+Where are the logs?
+===================
+
+This is a common question from people who are new to Docker and containerization. As a best practice, Dockerized applications are not supposed to write their logs to files. Container engines like Docker have their own log management infrastructure that captures any lines written to stdout and then, ideally, ships them off to some sort of a log aggregator, like Splunk or ELK. IIQ embedded in Docker is not different in this regard.
+
+Since this is just a POC, we obviously don't have any kind of logging infrastructure in place, so you will need to view the Docker log output directly. From the root folder of this project (where `docker-compose.yml` is located), run: `docker-compose logs -f iiq`.
+
 # Additional scripts
 
 Additional scripts are provided in the `bin` directory.
-
-## Output
-
-To follow the logs, a `tail.sh` script has been provided.
 
 ## Entering the shell
 
