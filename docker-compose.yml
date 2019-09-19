@@ -86,6 +86,7 @@ services:
       - MYSQL_ROOT_PASSWORD=password
       - IIQ_VERSION=7.2
       - IIQ_PATCH=${IIQ_PATCH}
+      - CATALINA_OPTS=-Xmx1548M
     depends_on:
       - done
       - counter

@@ -89,17 +89,19 @@ importIIQObjects() {
 	        if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/config/init-acceleratorpack.xml ]]; then
 	                iiq "import init-acceleratorpack.xml"
 	        fi
-		if [[ -e /opt/iiq/imports ]]; then
-			pushd /opt/iiq/imports
-			for file in `ls`; do
-				cp -rf "$file" /opt/tomcat/webapps/identityiq/WEB-INF/config/
-			done
-			popd
-			if [[ -e /opt/iiq/auto-import-list ]]; then
-				for item in `cat /opt/iiq/auto-import-list`; do
-					iiq "import $item"
-				done
+		if [[ -e /opt/iiq/objects ]]; then
+			if [[ -e /tmp/import.xml ]]; then
+				rm /tmp/import.xml
 			fi
+			echo "<?xml version='1.0' encoding='UTF-8'?>" >> /tmp/import.xml
+			echo '<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">' >> /tmp/import.xml
+			echo "<sailpoint>" >> /tmp/import.xml
+			for file in `find /opt/iiq/objects -name \*.xml | sort`
+			do
+				echo "<ImportAction name='include' value='${file}'/>" >> /tmp/import.xml
+			done
+			echo "</sailpoint>" >> /tmp/import.xml
+			iiq "import /tmp/import.xml"
 		fi
 	else
 		if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/config/sp.init-custom.xml ]]; then
@@ -225,6 +227,9 @@ fi
 if [[ -z "${INIT}" ]] || [[ ! -z "${INIT_LOCAL}" ]]
 then
 	# Start up Tomcat if not the init container *or* if we're doing a local build
+	if [[ ! -z "${TOMCAT_MEMORY}" ]]; then
+		export JAVA_OPTS="${JAVA_OPTS} -Xmx${TOMCAT_MEMORY}"
+	fi
 	/opt/tomcat/bin/catalina.sh run | tee -a /opt/tomcat/logs/catalina.out
 else
 	echo "=> Initialization complete, exiting!"
