@@ -35,7 +35,8 @@ COPY sql/target.sql /opt/sql/
 RUN mkdir -p /opt/iiq && mkdir -p /opt/iiq/imports && mkdir -p /opt/iiq/plugins && mkdir -p /opt/iiq/patch && mkdir -p /opt/iiq/efix && mkdir -p /opt/iiq/certs
 
 COPY src/identityiq.war /opt/iiq/identityiq.war
-COPY src/imports/* /opt/iiq/imports/
+#COPY src/imports/* /opt/iiq/imports/
+COPY src/objects/ /opt/iiq/objects/
 COPY src/plugins/* /opt/iiq/plugins/
 COPY src/patch/* /opt/iiq/patch/
 COPY src/efix/* /opt/iiq/efix/
