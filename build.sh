@@ -8,8 +8,9 @@ PLUGINS=()
 PATCHES=()
 HOTFIXES=()
 TRUSTEDCERTS=()
+OBJECTS=()
 
-while getopts ":b:t:z:w:m:e:p:s1" opt; do
+while getopts ":b:t:z:w:m:e:p:s:o:" opt; do
   case ${opt} in
     b ) SSB=${OPTARG}
       ;;
@@ -29,11 +30,12 @@ while getopts ":b:t:z:w:m:e:p:s1" opt; do
     e )
       HOTFIXES+=("${OPTARG}")
       ;;
+    o )
+      OBJECTS+=("${OPTARG}")
+      ;;
     s ) SKIP_DEMO_COMPANY_DATA=y
       ;;
     w ) IIQ_WAR=${OPTARG}
-      ;;
-    1 ) ONE_FILE=y
       ;;
     \? ) echo "Usage: ./start.sh [-b <existing SSB build directory>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>]"
       ;;
@@ -165,7 +167,12 @@ if [[ ! -z ${SSB} ]]; then
 	greenecho " => Building SSB..."
 	export SPTARGET
 	pushd ${SSB}
-	ant clean war >> build/build.log 2>&1
+	mkdir -p build
+	ant clean war >> ${BUILD}/build.log 2>&1
+	if [[ ! -e build/deploy/identityiq.war ]]; then
+		redecho "The SSB build does not appear to have produced an identityiq.war; please see the build.log for details"
+		exit 9
+	fi
 	cp build/deploy/identityiq.war ${BUILD} 2> /dev/null
 	popd
 else
@@ -190,16 +197,19 @@ mkdir -p iiq-build/src/patch
 mkdir -p iiq-build/src/efix
 mkdir -p iiq-build/src/plugins
 mkdir -p iiq-build/src/certs
+mkdir -p iiq-build/src/objects
 
 rm -f iiq-build/src/plugins/*.zip
 rm -f iiq-build/src/patch/*.jar
 rm -f iiq-build/src/efix/*.zip
 rm -f iiq-build/src/efix/*.jar
+rm -rf iiq-build/src/objects/*
 
 touch iiq-build/src/efix/.keep
 touch iiq-build/src/patch/.keep
 touch iiq-build/src/plugins/.keep
 touch iiq-build/src/certs/.keep
+touch iiq-build/src/objects/.keep
 
 for patch in "${PATCHES[@]}"
 do
@@ -223,6 +233,12 @@ for cert in "${TRUSTEDCERTS[@]}"
 do
 	greenecho " => Including trusted SSL certificate $cert"
 	cp "$cert" "iiq-build/src/certs"
+done
+
+for object in "${OBJECTS[@]}"
+do
+	greenecho " => Including object $object"
+	cp -rf "$object" "iiq-build/src/objects"
 done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
