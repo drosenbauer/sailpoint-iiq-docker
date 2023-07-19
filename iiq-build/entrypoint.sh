@@ -1,5 +1,20 @@
 #!/bin/bash
 
+################
+# Invoked on startup by Docker
+#
+# Performs several actions:
+#   - Ensures that the IIQ WAR, patches, and efixes are installed
+#   - If we are running the 'single container' model, installs mysqld locally
+#   - If the database is not initialized, initializes and patches it
+#     - NOTE: This doesn't work for Oracle. You need to pre-initialize the Oracle DB.
+#   - Installs the identityiq DB schema objects
+#   - If there are no objects in IIQ, imports init.xml and init-lcm.xml
+#   - If there are any object XMLs in /opt/iiq/objects, imports them
+#   - If there are any objects installed, just imports sp.init-custom.xml
+#   - Installs any plugins in /opt/iiq/plugins
+#   - Starts Tomcat, listening on port 8080
+
 iiq() {
 	COMMAND=$1
 	echo "Executing iiq console command '$COMMAND'"
@@ -147,6 +162,7 @@ then
 	export PLUGINDB=identityiqPlugin
 	export PLUGINUSER=identityiqPlugin
 	export PLUGINPASS=identityiqPlugin
+	# Starts the mysqld server in the background, then returns
 	/mysql-local.sh
 fi
 
@@ -211,7 +227,7 @@ then
 		unzip -q employees.zip
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /opt/sql/employees.sql
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /opt/sql/target.sql
-		mysql -s -N -h${MYSQL_HOST} -uroot -p${MYSQL_ROOT_PASSWORD} -e "grant select on hr.* to 'identityiq';"
+		mysql -s -N -h${MYSQL_HOST} -uroot -p${MYSQL_ROOT_PASSWORD} -e "grant select on hr.* to 'identityiq'; grant select on hr.* to 'identityiqPlugin';"
 	fi
 
 	# Import init.xml, etc

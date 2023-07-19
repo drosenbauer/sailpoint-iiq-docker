@@ -17,11 +17,9 @@ then
 	if [[ ! -z $PLUGINDB ]]; then
 		echo "=> Creating the plugin database using the following script:"
 		mkdir -p /tmp/sql
-		echo "create user if not exists ${PLUGINUSER} identified by '${PLUGINPASS}';" > /tmp/sql/plugindb.sql
+		echo "create user if not exists '${PLUGINUSER}' identified by '${PLUGINPASS}';" > /tmp/sql/plugindb.sql
 		echo "CREATE DATABASE ${PLUGINDB};" >> /tmp/sql/plugindb.sql
-		echo "GRANT ALL PRIVILEGES ON ${PLUGINDB}.* TO '${PLUGINUSER}' IDENTIFIED BY '${PLUGINPASS}';" >> /tmp/sql/plugindb.sql
-		echo "GRANT ALL PRIVILEGES ON ${PLUGINDB}.* TO '${PLUGINUSER}'@'%' IDENTIFIED BY '${PLUGINPASS}';" >> /tmp/sql/plugindb.sql
-		echo "GRANT ALL PRIVILEGES ON ${PLUGINDB}.* TO '${PLUGINUSER}'@'localhost' IDENTIFIED BY '${PLUGINPASS}';" >> /tmp/sql/plugindb.sql
+		echo "GRANT ALL PRIVILEGES ON ${PLUGINDB}.* TO '${PLUGINUSER}';" >> /tmp/sql/plugindb.sql
 		cat /tmp/sql/plugindb.sql
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /tmp/sql/plugindb.sql
 	fi

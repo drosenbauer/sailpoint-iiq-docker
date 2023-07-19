@@ -191,7 +191,7 @@ if [[ ! -e ${BUILD}/identityiq.war ]]; then
 	exit 9
 fi
 
-cp ${BUILD}/identityiq.war iiq-build/src/
+cp ${BUILD}/identityiq.war iiq-build/sailpoint/
 
 mkdir -p iiq-build/src/patch
 mkdir -p iiq-build/src/efix
@@ -242,6 +242,6 @@ do
 done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
-docker-compose --log-level=ERROR build
+docker compose build --progress quiet
 
 greenecho " => All done!"

@@ -1,4 +1,4 @@
-<Context privileged="true" antiResourceLocking="false" 
-         docBase="${catalina.home}/webapps/manager">
+<Context privileged="true" antiResourceLocking="false" docBase="${catalina.home}/webapps/manager">
     <Valve className="org.apache.catalina.valves.RemoteAddrValve" allow="^.*$" />
+  <Manager sessionAttributeValueClassNameFilter="java\.lang\.(?:Boolean|Integer|Long|Number|String)|org\.apache\.catalina\.filters\.CsrfPreventionFilter\$LruCache(?:\$1)?|java\.util\.(?:Linked)?HashMap"/>
 </Context>
