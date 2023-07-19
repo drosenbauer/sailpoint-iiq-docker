@@ -52,7 +52,8 @@
 				Map theMap = new HashMap();
 				theMap.put("transformerClass", "sailpoint.transformer.IdentityTransformer");
 				theMap.put("transformerOptions", new HashMap());
-        return theMap;
+				theMap.put("identityName", identityName);
+        		return theMap;
 				
       ]]>
                             
@@ -106,7 +107,9 @@
                 
                 <Section columns="2" name="Some Fields">
                                                   
+                    <Field columnSpan="2" displayName="Text Field" name="identityName" type="string"/>
                     
+					
                     <Field columnSpan="2" displayName="Text Field" name="textField" type="string"/>
                                                   
                     

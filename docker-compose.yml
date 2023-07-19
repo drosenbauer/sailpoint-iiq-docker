@@ -73,7 +73,7 @@ services:
     build: ./iiq-build
     image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:${TAG-latest}
     environment:
-      - DATABASE_TYPE=mssql
+      - DATABASE_TYPE=${IIQ_DB_TYPE}
       - MSSQL_HOST=db
       - MSSQL_SA_USER=SA
       - MSSQL_USER=identityiq
@@ -103,7 +103,7 @@ services:
   iiq-init:
     image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:${TAG:-latest}
     environment:
-      - DATABASE_TYPE=mssql
+      - DATABASE_TYPE=${IIQ_DB_TYPE}
       - MSSQL_HOST=db
       - MSSQL_SA_USER=SA
       - MSSQL_USER=identityiq

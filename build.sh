@@ -55,7 +55,7 @@ if [[ ! -z $SSB ]] && [[ ! -z $IIQ_ZIP ]]; then
 fi
 
 # Validate specified locations
-if [[ ! -z $IIQ_ZIP ]] && [[ ! -e $IIQ_ZIP ]]; then
+if [[ ! -z "$IIQ_ZIP" ]] && [[ ! -e "$IIQ_ZIP" ]]; then
 	redecho "IIQ zip file $IIQ_ZIP does not exist"
 	exit 5
 fi
@@ -159,7 +159,7 @@ if [[ ! -z ${SSB} ]]; then
 fi
 
 if [[ ! -z $IIQ_ZIP ]]; then
-	IIQ_ZIP=`realname ${IIQ_ZIP}`
+	IIQ_ZIP=`realname "${IIQ_ZIP}"`
 fi
 
 # Start building
@@ -179,7 +179,7 @@ else
 	if [[ ! -z "$IIQ_ZIP" ]]; then
 		greenecho " => No SSB; extracting WAR from identityiq ZIP file"
 		pushd ${BUILD}
-		unzip -qo $IIQ_ZIP
+		unzip -qo "$IIQ_ZIP"
 		popd
 	else
 		cp "${IIQ_WAR}" "${BUILD}/identityiq.war"

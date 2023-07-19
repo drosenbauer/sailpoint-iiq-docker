@@ -5,5 +5,7 @@ iiq-build/src/plugins/*.zip
 iiq-build/src/imports/*.xml
 iiq-build/src/patch/
 iiq-build/src/efix/
+iiq-build/src/objects/
 build/
 identityiq*.zip
+.idea
