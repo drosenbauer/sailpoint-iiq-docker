@@ -39,7 +39,7 @@ services:
         - traefik.enable=false
 
   db_mysql:
-    image: "mysql:${MYSQL_VERSION:-5.7}"
+    image: "mysql:${MYSQL_VERSION:-8.0}"
     environment:
       - MYSQL_USER=identityiq
       - MYSQL_PASSWORD=identityiq
