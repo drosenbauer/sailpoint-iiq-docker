@@ -34,21 +34,21 @@ There are several of ways to start your Docker environment:
 2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
-5.  `./build.sh -z /path/to/identityiq-7.3.zip`
+5.  `./build.sh -z /path/to/identityiq-8.3.zip`
 
 The image tagged `latest` can be started standalone using the following Docker command:
 
-    docker run -it -d -p8080:8080 git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
+    docker run --init -it -d -p8080:8080 git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest
 
-Note that in local mode, the startup script will install and configure MySQL as part of container startup, rather than at built time, so your container will need network access. 
+Note that in single-container mode, the startup script will install and configure MySQL as part of container startup, rather than at build time. This means your container will need network access. 
 
-Standalone startup takes about 4 minutes on my machine, including the database installation and initial configuration.
+Standalone startup takes about 3-4 minutes on my Macbook Pro, including the database installation and import of IIQ's init.xml.
 
 ## Oddities that are okay
 
 If you're following the logs, you will notice the MySQL database start up and then shut down again. This is intended to do some initialization of database files and is normal.
 
-You will also see errors and warnings like this indicating that the other build services are unavailable. These can be safely ignored.
+You will also see the following sporadic errors and warnings, especially during startup. These can be safely ignored.
 
 * `ldap_sasl_bind(SIMPLE): Can't contact LDAP server (-1)`
 * `mysql: [Warning] Using a password on the command line interface can be insecure.`
@@ -57,7 +57,7 @@ You will also see errors and warnings like this indicating that the other build 
 
 # Compose with a pre-built image
 
-**This option is for Identity Works internal use only. Sorry.**
+**This option is for Identity Works internal use only. Sorry. We aren't allowed to distribute IIQ binaries.**
 
 On a Linux or Linux-like infrastructure:
 
@@ -76,7 +76,7 @@ On a Linux or Linux-like infrastructure:
 2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
-5.  `./build.sh -z /path/to/identityiq-7.3.zip -p /path/to/identityiq-7.3p3.jar` (for example)
+5.  `./build.sh -z /path/to/identityiq-8.3.zip -p /path/to/identityiq-8.3p3.jar` (for example)
 6.  Start up a standalone stack with `docker-compose up -d`.
 
 IIQ will now be available on port 8080.
