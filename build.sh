@@ -83,6 +83,9 @@ fi
 
 greenecho " => Build directory is ${BUILD}"
 
+IIQ_VERSION=
+IIQ_PATCH=
+
 # Sanity checking for optional SSB build
 if [[ ! -z $SSB ]]; then
 	if [[ ! -z $(echo "${SSB}" | grep "git\\.") ]]; then
