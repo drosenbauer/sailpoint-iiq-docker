@@ -10,8 +10,10 @@ HOTFIXES=()
 TRUSTEDCERTS=()
 OBJECTS=()
 
-while getopts ":b:t:z:w:m:e:p:s:o:" opt; do
+while getopts ":b:t:z:w:m:e:p:s:o:l:" opt; do
   case ${opt} in
+    l ) LABEL=${OPTARG}
+      ;;
     b ) SSB=${OPTARG}
       ;;
     t ) SPTARGET=${OPTARG}
@@ -41,6 +43,11 @@ while getopts ":b:t:z:w:m:e:p:s:o:" opt; do
       ;;
   esac
 done
+
+if [[ ! -z $TAG ]]; then
+	greenecho " => Using image tag ${LABEL}"
+fi
+
 
 # Validate WAR locator inputs
 if [[ -z $SSB ]] && [[ -z $IIQ_ZIP ]] && [[ -z $IIQ_WAR ]]; then
@@ -245,6 +252,9 @@ do
 done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
-docker compose build --progress quiet
+docker compose --progress quiet build
+
+greenecho " => Tagging image 'latest' with $LABEL"
+docker tag git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest "git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:$LABEL"
 
 greenecho " => All done!"
