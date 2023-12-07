@@ -132,7 +132,7 @@ importIIQObjects() {
 	fi
 }
 
-export PATH=$PATH:/opt/mssql-tools/bin
+export PATH=$PATH:/opt/mssql-tools18/bin
 
 # unzip IIQ from the mounted directory
 mkdir -p /opt/tomcat/webapps/identityiq
