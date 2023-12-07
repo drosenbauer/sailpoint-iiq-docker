@@ -19,13 +19,11 @@ then
 	if [[ -e /opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables.sqlserver ]]; then
 		sed -ri -e "s/PASSWORD='identityiq'/PASSWORD='${MSSQL_PASS}'/" /opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables.sqlserver
 		sed -ri -e "s/PASSWORD='identityiqPlugin'/PASSWORD='${MSSQL_PASS}'/" /opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables.sqlserver
-		sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASSWORD} -S ${MSSQL_HOST} -b -i 
-/opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables.sqlserver
+		sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASSWORD} -S ${MSSQL_HOST} -b -i /opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables.sqlserver
 	else
 		sed -ri -e "s/PASSWORD='identityiq'/PASSWORD='${MSSQL_PASS}'/" /opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables-${IIQ_VERSION}.sqlserver
 		sed -ri -e "s/PASSWORD='identityiqPlugin'/PASSWORD='${MSSQL_PASS}'/" /opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables-${IIQ_VERSION}.sqlserver
-		sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASSWORD} -S ${MSSQL_HOST} -b -i 
-/opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables-${IIQ_VERSION}.sqlserver
+		sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASSWORD} -S ${MSSQL_HOST} -b -i /opt/tomcat/webapps/identityiq/WEB-INF/database/create_identityiq_tables-${IIQ_VERSION}.sqlserver
 	fi
 	
 	echo "=> Done creating database, checking for upgrades..."
