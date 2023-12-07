@@ -32,7 +32,7 @@ awaitDatabase() {
 			sleep 1
 		done
 	else
-		echo "waiting for mssql database on ${MYSQL_HOST} to come up"
+		echo "waiting for mssql database on ${MSSQL_HOST} to come up"
 		while ! sqlcmd -Q "select 1" -b -l 2 -t 2 -U SA -P "${MSSQL_SA_PASSWORD}" -S db -N o -C; do
 			echo -ne "."
 			sleep 1
