@@ -1,5 +1,11 @@
 #!/bin/bash
 
+COMPOSE_PATH=$(which docker-compose)
+if [[ echo "$COMPOSE_PATH" | grep "not found" ]]; then
+	redecho "Cannot find the docker-compose command"
+	exit 5
+fi
+
 greenecho " => Checking for a running instance of sailpoint-iiq in Docker..."
 
 OUTPUT=`docker-compose ps | grep 'iiq'`

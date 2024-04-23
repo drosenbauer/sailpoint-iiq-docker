@@ -80,6 +80,12 @@ do
 	fi
 done
 
+COMPOSE_PATH=$(which docker-compose)
+if [[ ! -z $(echo "$COMPOSE_PATH" | grep "not found") ]]; then
+	redecho "Cannot find the docker-compose command"
+	exit 5
+fi
+
 greenecho " => Creating and cleaning build directory"
 HERE=`pwd`
 mkdir -p ${HERE}/build/tmp
@@ -252,9 +258,11 @@ do
 done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
-docker compose --progress quiet build
+docker-compose --progress quiet build
 
-greenecho " => Tagging image 'latest' with $LABEL"
-docker tag git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest "git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:$LABEL"
+if [[ ! -z "${LABEL}" ]]; then
+	greenecho " => Tagging image 'latest' with $LABEL"
+	docker tag git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest "git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:$LABEL"
+fi
 
 greenecho " => All done!"
