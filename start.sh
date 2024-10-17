@@ -1,7 +1,10 @@
 #!/bin/bash
 
+source bin/include/utils.sh
+
 COMPOSE_PATH=$(which docker-compose)
-if [[ echo "$COMPOSE_PATH" | grep "not found" ]]; then
+
+if [[ ! -z "$(echo "$COMPOSE_PATH" | grep "not found")" ]]; then
 	redecho "Cannot find the docker-compose command"
 	exit 5
 fi

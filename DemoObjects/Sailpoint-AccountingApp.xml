@@ -1,0 +1,800 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<sailpoint>
+    <!-- NOTE: This is a JDBC application intended to point at the tables created by target.sql over in the /sql/ directory. -->
+
+    <CorrelationConfig name="Accounting App Matcher">
+        <AttributeAssignments>
+            <Filter operation="EQ" property="name" value="emplid"/>
+            <Filter operation="EQ" property="userLogin" value="username"/>
+        </AttributeAssignments>
+    </CorrelationConfig>
+
+    <Rule language="beanshell" name="JDBC - Accounting App - Create" type="JDBCOperationProvisioning">
+        <Description>This rule is used by the JDBC connector to do provisioning of the data .</Description>
+        <Signature returnType="ProvisioningResult"/>
+        <Source>
+        <![CDATA[
+            import sailpoint.object.ProvisioningResult;
+            import sailpoint.object.ProvisioningPlan;
+            import sailpoint.object.Identity;
+            import sailpoint.object.ProvisioningPlan.AccountRequest;
+            import sailpoint.object.ProvisioningPlan.AttributeRequest;
+            import sailpoint.tools.GeneralException;
+            import sailpoint.tools.Util;
+
+            import java.sql.PreparedStatement;
+            import java.sql.ResultSet;
+            import java.sql.Types;
+            import java.util.HashSet;
+
+                boolean addIndexedParameter(PreparedStatement stmt, AccountRequest accountRequest, String parameterName, int index) {
+                    AttributeRequest attributeRequest = accountRequest.getAttributeRequest(parameterName);
+                    if (attributeRequest == null || attributeRequest.getValue() == null || Util.isNullOrEmpty(Util.otoa(attributeRequest.getValue()))) {
+                        stmt.setNull(index, Types.VARCHAR);
+                        return false;
+                    } else {
+                        String value = Util.otoa(attributeRequest.getValue());
+                        stmt.setString(index, value);
+                        return true;
+                    }
+                }
+
+                try {
+                    AccountRequest accountRequest = request;
+                    String username = accountRequest.getNativeIdentity();
+                    if (Util.isNullOrEmpty(username)) {
+                        throw new GeneralException("A native identity is required for provisioning");
+                    }
+
+                    ProvisioningResult result = new ProvisioningResult();
+                    String CHECK_SQL =
+                            "SELECT 1 FROM users WHERE username = ?";
+
+                    String EXISTING_ROLES_SQL =
+                            "SELECT role_name FROM roles_users WHERE username = ?";
+
+                    String CREATE_SQL =
+                            "INSERT INTO users (username, first_name, middle_name, last_name, display_name, emplid, manager_username, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+                    String INSERT_ROLE_SQL =
+                            "INSERT INTO roles_users (role_name, username) VALUES (?, ?)";
+
+                    boolean needsCreate = true;
+                    PreparedStatement checkStatement = connection.prepareStatement(CHECK_SQL);
+                    try {
+                        checkStatement.setString(1, username);
+
+                        ResultSet results = checkStatement.executeQuery();
+                        try {
+                            if (results.next()) {
+                                needsCreate = false;
+                            }
+                        } finally {
+                            results.close();
+                        }
+                    } finally {
+                        checkStatement.close();
+                    }
+
+                    if (needsCreate) {
+                        PreparedStatement createStatement = connection.prepareStatement(CREATE_SQL);
+                        try {
+                            createStatement.setString(1, username);
+                            addIndexedParameter(createStatement, accountRequest, "first_name", 2);
+                            addIndexedParameter(createStatement, accountRequest, "middle_name", 3);
+                            addIndexedParameter(createStatement, accountRequest, "last_name", 4);
+                            addIndexedParameter(createStatement, accountRequest, "display_name", 5);
+                            addIndexedParameter(createStatement, accountRequest, "emplid", 6);
+                            addIndexedParameter(createStatement, accountRequest, "manager_username", 7);
+                            addIndexedParameter(createStatement, accountRequest, "enabled", 8);
+
+                            createStatement.executeUpdate();
+                        } finally {
+                            createStatement.close();
+                        }
+                    }
+
+                    Set existingRoles = new HashSet();
+
+                    PreparedStatement existingRolesStmt = connection.prepareStatement(EXISTING_ROLES_SQL);
+                    try {
+                        existingRolesStmt.setString(1, username);
+                        ResultSet results = existingRolesStmt.executeQuery();
+                        try {
+                            while (results.next()) {
+                                existingRoles.add(results.getString(1));
+                            }
+                        } finally {
+                            results.close();
+                        }
+                    } finally {
+                        existingRolesStmt.close();
+                    }
+
+                    PreparedStatement insertRole = connection.prepareStatement(INSERT_ROLE_SQL);
+
+                    try {
+                        for (AttributeRequest attributeRequest : Util.safeIterable(accountRequest.getAttributeRequests())) {
+                            if (attributeRequest.getName().equalsIgnoreCase("role_name")) {
+                                List<String> values = Util.otol(attributeRequest.getValue());
+                                for (String value : Util.safeIterable(values)) {
+                                    if (!existingRoles.contains(value)) {
+                                        insertRole.setString(1, value);
+                                        insertRole.setString(2, username);
+                                        insertRole.executeUpdate();
+                                        existingRoles.add(value);
+                                    }
+                                }
+                            }
+                        }
+                    } finally {
+                        insertRole.close();
+                    }
+
+                    result.setStatus(ProvisioningResult.STATUS_COMMITTED);
+                    return result;
+                } catch (Exception e) {
+                    log.error("Caught an exception provisioning an account", e);
+                    throw e;
+                }
+            ]]>
+        </Source>
+    </Rule>
+
+    <Rule language="beanshell" name="JDBC - Accounting App - Modify" type="JDBCOperationProvisioning">
+        <Description>This rule is used by the JDBC connector to do provisioning of the data .</Description>
+        <Signature returnType="ProvisioningResult"/>
+        <Source>
+        <![CDATA[
+            import sailpoint.object.ProvisioningResult;
+            import sailpoint.object.ProvisioningPlan;
+            import sailpoint.object.Identity;
+            import sailpoint.object.ProvisioningPlan.AccountRequest;
+            import sailpoint.object.ProvisioningPlan.AttributeRequest;
+            import sailpoint.tools.GeneralException;
+            import sailpoint.tools.Util;
+
+            import java.sql.PreparedStatement;
+            import java.sql.ResultSet;
+            import java.sql.Types;
+            import java.util.HashSet;
+
+                try {
+                    AccountRequest accountRequest = request;
+                    String username = accountRequest.getNativeIdentity();
+                    if (Util.isNullOrEmpty(username)) {
+                        throw new GeneralException("A native identity is required for provisioning");
+                    }
+
+                    ProvisioningResult result = new ProvisioningResult();
+                    String CHECK_SQL =
+                            "SELECT 1 FROM users WHERE username = ?";
+
+                    String EXISTING_ROLES_SQL =
+                            "SELECT role_name FROM roles_users WHERE username = ?";
+
+                    String INSERT_ROLE_SQL =
+                            "INSERT INTO roles_users (role_name, username) VALUES (?, ?)";
+
+                    String DELETE_ROLE_SQL =
+                            "DELETE FROM roles_users WHERE role_name = ? and username = ?";
+
+
+                    boolean exists = false;
+                    PreparedStatement checkStatement = connection.prepareStatement(CHECK_SQL);
+                    try {
+                        checkStatement.setString(1, username);
+
+                        ResultSet results = checkStatement.executeQuery();
+                        try {
+                            if (results.next()) {
+                                exists = true;
+                            }
+                        } finally {
+                            results.close();
+                        }
+                    } finally {
+                        checkStatement.close();
+                    }
+
+                    if (!exists) {
+                        throw new GeneralException("No such user " + username);
+                    }
+
+                    String[] FIELDS = new String[]{"first_name", "middle_name", "last_name", "display_name", "emplid", "manager_username", "enabled"};
+
+                    for (String field : FIELDS) {
+                        AttributeRequest attributeRequest = accountRequest.getAttributeRequest(field);
+                        if (attributeRequest != null && attributeRequest.getOperation() == ProvisioningPlan.Operation.Set) {
+                            String newValue = Util.otoa(attributeRequest.getValue());
+                            String query = "update users set " + field + " = ? where username = ?";
+                            PreparedStatement updateStatement = connection.prepareStatement(query);
+                            try {
+                                if (Util.isNullOrEmpty(newValue)) {
+                                    updateStatement.setNull(1, Types.VARCHAR);
+                                } else {
+                                    updateStatement.setString(1, newValue);
+                                }
+                                updateStatement.setString(2, username);
+                                updateStatement.executeUpdate();
+                            } finally {
+                                updateStatement.close();
+                            }
+                        }
+                    }
+
+                    Set existingRoles = new HashSet();
+
+                    PreparedStatement existingRolesStmt = connection.prepareStatement(EXISTING_ROLES_SQL);
+                    try {
+                        existingRolesStmt.setString(1, username);
+                        ResultSet results = existingRolesStmt.executeQuery();
+                        try {
+                            while (results.next()) {
+                                existingRoles.add(results.getString(1));
+                            }
+                        } finally {
+                            results.close();
+                        }
+                    } finally {
+                        existingRolesStmt.close();
+                    }
+
+                    PreparedStatement insertRole = connection.prepareStatement(INSERT_ROLE_SQL);
+                    PreparedStatement deleteRole = connection.prepareStatement(DELETE_ROLE_SQL);
+
+                    try {
+                        for (AttributeRequest attributeRequest : Util.safeIterable(accountRequest.getAttributeRequests())) {
+                            if (attributeRequest.getName().equalsIgnoreCase("role_name")) {
+                                List<String> values = Util.otol(attributeRequest.getValue());
+                                for (String value : Util.safeIterable(values)) {
+                                    if (attributeRequest.getOperation() == ProvisioningPlan.Operation.Add || attributeRequest.getOperation() == ProvisioningPlan.Operation.Set) {
+                                        if (!existingRoles.contains(value)) {
+                                            insertRole.setString(1, value);
+                                            insertRole.setString(2, username);
+                                            insertRole.executeUpdate();
+                                            existingRoles.add(value);
+                                        }
+                                    } else if (attributeRequest.getOperation() == ProvisioningPlan.Operation.Remove) {
+                                        if (existingRoles.contains(value)) {
+                                            deleteRole.setString(1, value);
+                                            deleteRole.setString(2, username);
+                                            deleteRole.executeUpdate();
+                                            existingRoles.remove(value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } finally {
+                        deleteRole.close();
+                        insertRole.close();
+                    }
+
+                    result.setStatus(ProvisioningResult.STATUS_COMMITTED);
+                    return result;
+                } catch (Exception e) {
+                    log.error("Caught an exception modifying an account", e);
+                    throw e;
+                }
+            ]]>
+        </Source>
+    </Rule>
+
+    <Rule language="beanshell" name="JDBC - Accounting App - Enable" type="JDBCOperationProvisioning">
+        <Description>This rule is used by the JDBC connector to do provisioning of the data .</Description>
+        <Signature returnType="ProvisioningResult"/>
+        <Source>
+        <![CDATA[
+            import sailpoint.object.ProvisioningResult;
+            import sailpoint.object.ProvisioningPlan;
+            import sailpoint.object.Identity;
+            import sailpoint.object.ProvisioningPlan.AccountRequest;
+            import sailpoint.object.ProvisioningPlan.AttributeRequest;
+            import sailpoint.tools.GeneralException;
+            import sailpoint.tools.Util;
+
+            import java.sql.PreparedStatement;
+            import java.sql.ResultSet;
+            import java.sql.Types;
+            import java.util.HashSet;
+
+                try {
+                    AccountRequest accountRequest = request;
+                    String username = accountRequest.getNativeIdentity();
+                    if (Util.isNullOrEmpty(username)) {
+                        throw new GeneralException("A native identity is required for provisioning");
+                    }
+
+                    ProvisioningResult result = new ProvisioningResult();
+                    String CHECK_SQL =
+                            "SELECT 1 FROM users WHERE username = ?";
+
+                    String UPDATE_SQL =
+                            "update users set enabled = 'TRUE' where username = ?";
+
+                    boolean exists = false;
+                    PreparedStatement checkStatement = connection.prepareStatement(CHECK_SQL);
+                    try {
+                        checkStatement.setString(1, username);
+
+                        ResultSet results = checkStatement.executeQuery();
+                        try {
+                            if (results.next()) {
+                                exists = true;
+                            }
+                        } finally {
+                            results.close();
+                        }
+                    } finally {
+                        checkStatement.close();
+                    }
+
+                    if (!exists) {
+                        throw new GeneralException("No such user " + username);
+                    }
+
+                    PreparedStatement updateStatement = connection.prepareStatement(UPDATE_SQL);
+                    try {
+                        updateStatement.setString(1, username);
+                        updateStatement.executeUpdate();
+                    } finally {
+                        updateStatement.close();
+                    }
+
+                    result.setStatus(ProvisioningResult.STATUS_COMMITTED);
+                    return result;
+                } catch (Exception e) {
+                    log.error("Caught an exception enabling an account", e);
+                    throw e;
+                }
+            ]]>
+        </Source>
+    </Rule>
+
+    <Rule language="beanshell" name="JDBC - Accounting App - Disable" type="JDBCOperationProvisioning">
+        <Description>This rule is used by the JDBC connector to do provisioning of the data .</Description>
+        <Signature returnType="ProvisioningResult"/>
+        <Source>
+        <![CDATA[
+            import sailpoint.object.ProvisioningResult;
+            import sailpoint.object.ProvisioningPlan;
+            import sailpoint.object.Identity;
+            import sailpoint.object.ProvisioningPlan.AccountRequest;
+            import sailpoint.object.ProvisioningPlan.AttributeRequest;
+            import sailpoint.tools.GeneralException;
+            import sailpoint.tools.Util;
+
+            import java.sql.PreparedStatement;
+            import java.sql.ResultSet;
+            import java.sql.Types;
+            import java.util.HashSet;
+
+                try {
+                    AccountRequest accountRequest = request;
+                    String username = accountRequest.getNativeIdentity();
+                    if (Util.isNullOrEmpty(username)) {
+                        throw new GeneralException("A native identity is required for provisioning");
+                    }
+
+                    ProvisioningResult result = new ProvisioningResult();
+                    String CHECK_SQL =
+                            "SELECT 1 FROM users WHERE username = ?";
+
+                    String UPDATE_SQL =
+                            "update users set enabled = 'FALSE' where username = ?";
+
+                    boolean exists = false;
+                    PreparedStatement checkStatement = connection.prepareStatement(CHECK_SQL);
+                    try {
+                        checkStatement.setString(1, username);
+
+                        ResultSet results = checkStatement.executeQuery();
+                        try {
+                            if (results.next()) {
+                                exists = true;
+                            }
+                        } finally {
+                            results.close();
+                        }
+                    } finally {
+                        checkStatement.close();
+                    }
+
+                    if (!exists) {
+                        throw new GeneralException("No such user " + username);
+                    }
+
+                    PreparedStatement updateStatement = connection.prepareStatement(UPDATE_SQL);
+                    try {
+                        updateStatement.setString(1, username);
+                        updateStatement.executeUpdate();
+                    } finally {
+                        updateStatement.close();
+                    }
+
+                    result.setStatus(ProvisioningResult.STATUS_COMMITTED);
+                    return result;
+                } catch (Exception e) {
+                    log.error("Caught an exception disabling an account", e);
+                    throw e;
+                }
+            ]]>
+        </Source>
+    </Rule>
+
+    <Rule language="beanshell" name="JDBC - Accounting App - Delete" type="JDBCOperationProvisioning">
+        <Description>This rule is used by the JDBC connector to do provisioning of the data .</Description>
+        <Signature returnType="ProvisioningResult"/>
+        <Source>
+        <![CDATA[
+            import sailpoint.object.ProvisioningResult;
+            import sailpoint.object.ProvisioningPlan;
+            import sailpoint.object.Identity;
+            import sailpoint.object.ProvisioningPlan.AccountRequest;
+            import sailpoint.object.ProvisioningPlan.AttributeRequest;
+            import sailpoint.tools.GeneralException;
+            import sailpoint.tools.Util;
+
+            import java.sql.PreparedStatement;
+            import java.sql.ResultSet;
+            import java.sql.Types;
+            import java.util.HashSet;
+
+                try {
+                    AccountRequest accountRequest = request;
+                    String username = accountRequest.getNativeIdentity();
+                    if (Util.isNullOrEmpty(username)) {
+                        throw new GeneralException("A native identity is required for provisioning");
+                    }
+
+                    ProvisioningResult result = new ProvisioningResult();
+                    String CHECK_SQL =
+                            "SELECT 1 FROM users WHERE username = ?";
+
+                    String DELETE_SQL =
+                            "delete from users where username = ?";
+
+                    boolean exists = false;
+                    PreparedStatement checkStatement = connection.prepareStatement(CHECK_SQL);
+                    try {
+                        checkStatement.setString(1, username);
+
+                        ResultSet results = checkStatement.executeQuery();
+                        try {
+                            if (results.next()) {
+                                exists = true;
+                            }
+                        } finally {
+                            results.close();
+                        }
+                    } finally {
+                        checkStatement.close();
+                    }
+
+                    if (exists) {
+                        PreparedStatement updateStatement = connection.prepareStatement(DELETE_SQL);
+                        try {
+                            updateStatement.setString(1, username);
+                            updateStatement.executeUpdate();
+                        } finally {
+                            updateStatement.close();
+                        }
+                    }
+
+                    result.setStatus(ProvisioningResult.STATUS_COMMITTED);
+                    return result;
+                } catch (Exception e) {
+                    log.error("Caught an exception deleting an account", e);
+                    throw e;
+                }
+            ]]>
+        </Source>
+    </Rule>
+
+    <Application connector="sailpoint.connector.JDBCConnector" featuresString="DISCOVER_SCHEMA, PROVISIONING, SYNC_PROVISIONING, DIRECT_PERMISSIONS, SEARCH, ENABLE, UNLOCK" icon="databaseIcon" name="Accounting App" profileClass="" type="JDBC">
+        <AccountCorrelationConfig>
+            <Reference class="sailpoint.object.CorrelationConfig" name="Accounting App Matcher"/>
+        </AccountCorrelationConfig>
+        <Attributes>
+            <Map>
+                <entry key="SQL" value="select users.*, roles_users.role_name&#xD;&#xA;from users left outer join roles_users on roles_users.username = users.username"/>
+                <entry key="afterProvisioningRule"/>
+                <entry key="aggregationMode">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="beforeProvisioningRule"/>
+                <entry key="compositeDefinition"/>
+                <entry key="deltaTable"/>
+                <entry key="driverClass" value="com.mysql.jdbc.Driver"/>
+                <entry key="getDeltaSQL"/>
+                <entry key="getObjectSQL" value="select users.*, roles_users.role_name&#xD;&#xA;from users left outer join roles_users on roles_users.username = users.username&#xD;&#xA;where users.username = &apos;$(identity)&apos;"/>
+                <entry key="indexColumns">
+                    <value>
+                        <List>
+                            <String>username</String>
+                        </List>
+                    </value>
+                </entry>
+                <entry key="isPermissionEnabled">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="jdbcCreateProvisioningRule" value="JDBC - Accounting App - Create"/>
+                <entry key="jdbcDeleteProvisioningRule" value="JDBC - Accounting App - Delete"/>
+                <entry key="jdbcDisableProvisioningRule" value="JDBC - Accounting App - Disable"/>
+                <entry key="jdbcEnableProvisioningRule" value="JDBC - Accounting App - Enable"/>
+                <entry key="jdbcModifyProvisioningRule" value="JDBC - Accounting App - Modify"/>
+                <entry key="mergeColumns">
+                    <value>
+                        <List>
+                            <String>role_name</String>
+                        </List>
+                    </value>
+                </entry>
+                <entry key="mergeRows">
+                    <value>
+                        <Boolean>true</Boolean>
+                    </value>
+                </entry>
+                <entry key="nativeChangeDetectionAttributeScope" value="entitlements"/>
+                <entry key="nativeChangeDetectionAttributes"/>
+                <entry key="nativeChangeDetectionEnabled">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="nativeChangeDetectionOperations"/>
+                <entry key="partitionMode">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="partitionStatements"/>
+                <entry key="password" value="3:ACP:QyzvO9nI1AjJeX93lPR63/kB4KGeQO76TQut37OHans="/>
+                <entry key="provisionRule" value="operationRule"/>
+                <entry key="role.SQL" value="select role_name from roles"/>
+                <entry key="role.aggregationMode">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.deltaTable"/>
+                <entry key="role.driverClass" value="com.mysql.jdbc.Driver"/>
+                <entry key="role.getDeltaSQL"/>
+                <entry key="role.getDirectPermObjectSQL"/>
+                <entry key="role.getObjectSQL"/>
+                <entry key="role.isPermissionEnabled">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.mergeRows">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.password" value="3:ACP:mV54vhfz1eW56fDoZmFkNZ9gUZY/SXAZzn4SP/Q+O+8="/>
+                <entry key="role.url" value="jdbc:mysql://localhost/target"/>
+                <entry key="role.useExecuteQuery">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.useStoredProcedureDelta">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.useStoredProcedureDirectPermission">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.useStoredProcedureGetObject">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.useStoredProcedureSqlStmt">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="role.user" value="identityiq"/>
+                <entry key="sysDescriptions">
+                    <value>
+                        <Map>
+                            <entry key="en_US"/>
+                        </Map>
+                    </value>
+                </entry>
+                <entry key="templateApplication" value="JDBC Template"/>
+                <entry key="testConnSQL"/>
+                <entry key="url" value="jdbc:mysql://localhost/target"/>
+                <entry key="useExecuteQuery">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="useStoredProcedureDelta">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="useStoredProcedureDirectPermission">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="useStoredProcedureGetObject">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="useStoredProcedurePartition">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="useStoredProcedureSqlStmt">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="useStoredProcedureTestConn">
+                    <value>
+                        <Boolean></Boolean>
+                    </value>
+                </entry>
+                <entry key="user" value="identityiq"/>
+            </Map>
+        </Attributes>
+        <Owner>
+            <Reference class="sailpoint.object.Identity" name="spadmin"/>
+        </Owner>
+        <ProvisioningForms>
+            <Form name="Create Account App Account" objectType="account" type="Create">
+                <Attributes>
+                    <Map>
+                        <entry key="pageTitle" value="Create Account App Account"/>
+                    </Map>
+                </Attributes>
+                <Section name="Fields">
+                    <Field name="username" type="string">
+                        <Script>
+                            <Source><![CDATA[
+                                import sailpoint.tools.Util;
+                                String username = identity.getStringAttribute("userLogin");
+                                if (Util.isNullOrEmpty(username)) {
+                                    username = "e" + identity.getName();
+                                }
+                                return username;
+                            ]]></Source>
+                        </Script>
+                    </Field>
+                    <Field name="emplid" type="string">
+                        <Script>
+                            <Source>return identity.getName();</Source>
+                        </Script>
+                    </Field>
+                    <Field name="first_name" type="string">
+                        <Script>
+                            <Source>return identity.getFirstname();</Source>
+                        </Script>
+                    </Field>
+                    <Field name="last_name" type="string">
+                        <Script>
+                            <Source>return identity.getLastname();</Source>
+                        </Script>
+                    </Field>
+                    <Field name="enabled" type="string" value="TRUE"/>
+                    <Field name="display_name" type="string">
+                        <Script>
+                            <Source>return identity.getFirstname() + " " + identity.getLastname();</Source>
+                        </Script>
+                    </Field>
+                </Section>
+            </Form>
+        </ProvisioningForms>
+        <Schemas>
+            <Schema displayAttribute="username" identityAttribute="username" instanceAttribute="" nativeObjectType="account" objectType="account" permissionsRemediationModificationType="None">
+                <AttributeDefinition name="username" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition name="first_name" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition name="middle_name" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition name="last_name" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition name="display_name" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition name="emplid" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition name="manager_username" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition name="enabled" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+                <AttributeDefinition entitlement="true" managed="true" multi="true" name="role_name" schemaObjectType="role" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+            </Schema>
+            <Schema aggregationType="group" displayAttribute="" identityAttribute="role_name" instanceAttribute="" nativeObjectType="role" objectType="role" permissionsRemediationModificationType="None">
+                <AttributeDefinition name="role_name" type="string">
+                    <Description></Description>
+                </AttributeDefinition>
+            </Schema>
+        </Schemas>
+    </Application>
+
+    <TaskDefinition formPath="/monitor/tasks/accountGroupAggregationTask.xhtml" name="AG - Accounting App" resultAction="Delete" subType="task_item_type_acct_grp_aggregation" type="AccountGroupAggregation">
+        <Attributes>
+            <Map>
+                <entry key="aggregationType" value="group"/>
+                <entry key="applications" value="Accounting App"/>
+                <entry key="checkDeleted" value="true"/>
+                <entry key="deltaAggregation" value="false"/>
+                <entry key="groupSchema"/>
+                <entry key="taskCompletionEmailNotify" value="Disabled"/>
+                <entry key="taskCompletionEmailRecipients"/>
+                <entry key="taskCompletionEmailTemplate"/>
+            </Map>
+        </Attributes>
+        <Description>Task template for application group scanning.</Description>
+        <Owner>
+            <Reference class="sailpoint.object.Identity" name="spadmin"/>
+        </Owner>
+        <Parent>
+            <Reference class="sailpoint.object.TaskDefinition" name="Account Group Aggregation"/>
+        </Parent>
+    </TaskDefinition>
+
+    <TaskDefinition formPath="/monitor/tasks/accountAggregationTask.xhtml" name="AA - Accounting App" resultAction="Delete" subType="task_item_type_acct_aggregation" type="AccountAggregation">
+        <Attributes>
+            <Map>
+                <entry key="applications" value="Accounting App"/>
+                <entry key="checkDeleted" value="true"/>
+                <entry key="checkHistory" value="false"/>
+                <entry key="checkPolicies" value="false"/>
+                <entry key="correlateEntitlements" value="true"/>
+                <entry key="correlateOnly" value="true"/>
+                <entry key="correlateScope" value="false"/>
+                <entry key="deltaAggregation" value="false"/>
+                <entry key="enablePartitioning" value="false"/>
+                <entry key="haltOnMaxError" value="false"/>
+                <entry key="noAutoCreateApplications" value="false"/>
+                <entry key="noAutoCreateScopes" value="false"/>
+                <entry key="noNeedsRefresh" value="true"/>
+                <entry key="noOptimizeReaggregation" value="false"/>
+                <entry key="promoteManagedAttributes" value="false"/>
+                <entry key="refreshCertifications" value="false"/>
+                <entry key="refreshScorecard" value="false"/>
+                <entry key="sequential" value="false"/>
+                <entry key="taskCompletionEmailNotify" value="Disabled"/>
+                <entry key="taskCompletionEmailRecipients"/>
+                <entry key="taskCompletionEmailTemplate"/>
+            </Map>
+        </Attributes>
+        <Description>Task template for application account scanning.</Description>
+        <Owner>
+            <Reference class="sailpoint.object.Identity" name="spadmin"/>
+        </Owner>
+        <Parent>
+            <Reference class="sailpoint.object.TaskDefinition" name="Account Aggregation"/>
+        </Parent>
+    </TaskDefinition>
+
+
+</sailpoint>

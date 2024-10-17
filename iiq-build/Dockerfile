@@ -16,7 +16,7 @@ RUN mv /usr/local/tomcat /opt/tomcat && \
 
 # Add admin/s3cret user
 ADD tomcat-users.xml /opt/tomcat/conf/
-run mkdir -p /opt/tomcat/conf/Catalina/localhost/
+RUN mkdir -p /opt/tomcat/conf/Catalina/localhost/
 ADD manager.xml /opt/tomcat/conf/Catalina/localhost
 
 # Add demo employee data
@@ -30,11 +30,12 @@ RUN mkdir -p /opt/iiq && \
     mkdir -p /opt/iiq/patch && \
     mkdir -p /opt/iiq/efix && \
     mkdir -p /opt/iiq/certs && \
+    mkdir -p /opt/iiq/lib && \
     mkdir -p /opt/tomcat/webapps/ROOT && \
     mkdir -p /etc/mysql/conf.d
 
 COPY sailpoint/identityiq.war /opt/iiq/identityiq.war
-COPY --from=iiqCommon ./iiq-common-public.jar /opt/iiq/iiq-common-public.jar
+COPY --from=iiqCommon ./iiq-common-public.jar /opt/iiq/lib/iiq-common-public.jar
 COPY src/ /opt/iiq/
 
 COPY index.html /opt/tomcat/webapps/ROOT
@@ -70,6 +71,7 @@ RUN rm /bin/sh && ln -s /bin/bash /bin/sh && \
 
 COPY --from=tomcat /opt /opt
 COPY --from=tomcat *.sh /
+COPY --from=tomcat *.ldif /
 COPY my.cnf /etc/mysql
 
 ENV CATALINA_HOME /opt/tomcat

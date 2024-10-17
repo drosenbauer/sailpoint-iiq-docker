@@ -68,22 +68,31 @@ configureMssqlProperties() {
 	sed -ri -e "s/^sessionFactory.hibernateProperties.hibernate.dialect/#sessionFactory.hibernateProperties.hibernate.dialect/" ${PROPS}
 	sed -ri -e "s/^pluginsDataSource.url/#pluginsDataSource.url/" ${PROPS}
 	sed -ri -e "s/^pluginsDataSource.driverClassName/#pluginsDataSource.driverClassName/" ${PROPS}
+
+	sed -ri -e "s/^dataSourceAccessHistory.url/#dataSourceAccessHistory.url/" ${PROPS}
+	sed -ri -e "s/^dataSourceAccessHistory.driverClassName/#dataSourceAccessHistory.driverClassName/" ${PROPS}
 	
 	sed -ri -e "s/^dataSource.username\=.*/dataSource.username=${MSSQL_USER}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	sed -ri -e "s/^dataSource.password\=.*/dataSource.password=${MSSQL_PASS}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
-#	sed -ri -e "s/^pluginsDataSource.username\=.*/pluginsDataSource.username=${MSSQL_USER}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	sed -ri -e "s/^pluginsDataSource.password\=.*/pluginsDataSource.password=${MSSQL_PASS}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
+	sed -ri -e "s/^dataSourceAccessHistory.password\=.*/dataSourceAccessHistory.password=${MSSQL_PASS}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	
 	
-	# Add the new MSSQL properties 
+	# Add the new MSSQL properties at the bottom of the file
 	echo """
-dataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiq;
+dataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiq;encrypt=true;trustServerCertificate=true
 dataSource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
 sessionFactory.hibernateProperties.hibernate.dialect=sailpoint.persistence.SQLServerPagingDialect
 scheduler.quartzProperties.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.MSSQLDelegate
 scheduler.quartzProperties.org.quartz.jobStore.selectWithLockSQL=SELECT * FROM {0}LOCKS UPDLOCK WHERE LOCK_NAME = ?
-pluginsDataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiqPlugin
+pluginsDataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiqPlugin;encrypt=true;trustServerCertificate=true
 pluginsDataSource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+dataSourceAccessHistory.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiqah;encrypt=true;trustServerCertificate=true
+dataSourceAccessHistory.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
+sessionFactoryAccessHistory.hibernateProperties.hibernate.dialect=sailpoint.persistence.SQLServerUnicodeDialect
+
+activeMQMessageServiceManager.activemqJdbcAdapter=org.apache.activemq.store.jdbc.adapter.TransactJDBCAdapter
 """ >> ${PROPS}
 }
 
@@ -134,6 +143,8 @@ importIIQObjects() {
 
 export PATH=$PATH:/opt/mssql-tools18/bin
 
+echo "=> Unpacking IIQ into /opt/tomcat/webapps"
+
 # unzip IIQ from the mounted directory
 mkdir -p /opt/tomcat/webapps/identityiq
 pushd /opt/tomcat/webapps/identityiq
@@ -149,6 +160,11 @@ do
 	unzip -q -o $file
 done
 popd
+
+if [[ -z "${IIQ_VERSION}" ]]; then
+	export IIQ_VERSION=$(unzip -p /opt/tomcat/webapps/identityiq/WEB-INF/lib/identityiq.jar META-INF/MANIFEST.MF | grep Implementation-Version | awk -F "[ p]" '{print $3}')
+	export IIQ_PATCH=$(unzip -p /opt/tomcat/webapps/identityiq/WEB-INF/lib/identityiq.jar META-INF/MANIFEST.MF | grep Implementation-Version | awk -F "[ p]" '{print $4}' | grep '[0-9]')
+fi
 
 if [[ "${DATABASE_TYPE}" == "local" ]]
 then
@@ -166,7 +182,7 @@ then
 	/mysql-local.sh
 fi
 
-if [[ "${DATABASE_TYPE}" == "mysql" ]]
+if [[ "${DATABASE_TYPE}" == "mysql" ]] || [[ -z "${DATABASE_TYPE}" ]]
 then
 	awaitDatabase mysql;
 	configureMysqlProperties;
@@ -211,31 +227,36 @@ then
 	fi
 fi
 
+echo "=> Copying files from /opt/iiq/lib to WEB-INF/lib"
+cp /opt/iiq/lib/*.jar /opt/tomcat/webapps/identityiq/WEB-INF/lib
+
 if [[ ! -z "${INIT}" ]] || [[ ! -z "${INIT_LOCAL}" ]]
 then
-	if [[ "${DATABASE_TYPE}" == "mysql" ]]
+	if [[ "${DATABASE_TYPE}" == "mysql" ]] || [[ -z "${DATABASE_TYPE}" ]]
 	then	
 		/database-setup.mysql.sh
-	else
+	else		
 		/database-setup.mssql.sh
 	fi
 
 	if [ -z "${SKIP_DEMO_IMPORT}" ]
 	then
-		echo "=> Importing dummy company data for HR"
+		echo "=> Importing example company data for HR"
 		cd /opt/sql
 		unzip -q employees.zip
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /opt/sql/employees.sql
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /opt/sql/target.sql
+
+		# It is okay if this fails
 		mysql -s -N -h${MYSQL_HOST} -uroot -p${MYSQL_ROOT_PASSWORD} -e "grant select on hr.* to 'identityiq'; grant select on hr.* to 'identityiqPlugin';"
 	fi
 
 	# Import init.xml, etc
 	importIIQObjects;
 
-	# Done service will only exist in the swarm context
+	# Done service will only exist in the compose / swarm context
 	if [[ -z "${INIT_LOCAL}" ]]; then
-		# Flag the "done" service as done
+		# Flag the "done" service as done, which will allow the main servers to start
 		nc done 40000
 	fi
 fi
