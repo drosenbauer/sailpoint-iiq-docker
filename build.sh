@@ -198,6 +198,7 @@ else
 		unzip -qo "$IIQ_ZIP"
 		popd
 	else
+		greenecho " => Using IIQ WAR at ${IIQ_WAR}"
 		cp "${IIQ_WAR}" "${BUILD}/identityiq.war"
 	fi
 fi
@@ -253,14 +254,16 @@ done
 
 for object in "${OBJECTS[@]}"
 do
-	greenecho " => Including object $object"
+	greenecho " => Including object(s) from ${object}"
 	cp -rf "$object" "iiq-build/src/objects"
 done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
-docker-compose --progress quiet build
+docker compose --progress quiet build
+greenecho " => Default image name: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest"
 
 if [[ ! -z "${LABEL}" ]]; then
+
 	greenecho " => Tagging image 'latest' with $LABEL"
 	docker tag git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest "git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:$LABEL"
 fi

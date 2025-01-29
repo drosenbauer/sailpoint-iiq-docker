@@ -90,11 +90,13 @@ On a Linux or Linux-like infrastructure:
 5.  `./build.sh -z /path/to/identityiq-8.3.zip -p /path/to/identityiq-8.3p3.jar` (for example)
 6.  Start up a standalone stack with `docker-compose up -d`.
 
-IIQ will now be available on port 8080.
+The default stack name is `iiqstack`, so your containers will be named things like `iiqstack_db`.
+
+On startup, IIQ will be available on port 8080.
 
 ### Initialization container
 
-A container called `iiq-init` will run on startup in the default configuration. This is a transient *init container*, which will do all of the database configuration and import of artifacts, then exit permanently. All other IIQ containers will wait (using the `docker-done` service) for the init container to finish before starting.
+A container called `iiq-init` will run on startup in the default configuration. This is a transient *init container*, which will do all of the database configuration and import of artifacts, then exit permanently. All other IIQ containers will wait for the init container to finish before starting.
 
 ### Scaling
 
@@ -205,7 +207,7 @@ This Docker Compose file will start up several services:
 * ssh: An SSH server
 * loadbalancer: The load balancer Traefik
 * iiq: IdentityIQ nodes (which can be replicated ad nauseum)
-* counter and done: Utility services to assist with startup of the stateful IIQ services
+* counter: Utility service to assist with startup of the stateful IIQ services
 
 These should be sufficient to demonstrate most of the non-proprietary connectors in IIQ. The service names double as the hostnames from within the containers, so IIQ sees the database host as having DNS name `db`, LDAP as having the DNS name `ldap`, etc. 
 

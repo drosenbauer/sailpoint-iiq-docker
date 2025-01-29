@@ -125,6 +125,7 @@ importIIQObjects() {
 				echo "<ImportAction name='include' value='${file}'/>" >> /tmp/import.xml
 			done
 			echo "</sailpoint>" >> /tmp/import.xml
+			echo " => Importing custom objects"
 			iiq "import /tmp/import.xml"
 		fi
 	else
@@ -148,17 +149,21 @@ echo "=> Unpacking IIQ into /opt/tomcat/webapps"
 # unzip IIQ from the mounted directory
 mkdir -p /opt/tomcat/webapps/identityiq
 pushd /opt/tomcat/webapps/identityiq
+
 unzip -q /opt/iiq/identityiq.war
-for file in /opt/iiq/patch/*.jar
+
+for file in $(ls /opt/iiq/patch/*.jar)
 do
 	echo "=> Including patch JAR $file"
 	unzip -q -o $file
 done
-for file in /opt/iiq/efix/*.jar
+
+for file in $(ls /opt/iiq/efix/*.jar)
 do
 	echo "=> Including efix ZIP $file"
 	unzip -q -o $file
 done
+
 popd
 
 if [[ -z "${IIQ_VERSION}" ]]; then
@@ -208,20 +213,6 @@ then
 		export NODE="iiq$COUNTER"
 
 		export JAVA_OPTS="-Diiq.hostname=$NODE"
-
-		echo "=> Waiting for the init container to finish initialization"
-		sleep 10
-		UP=0
-		while [[ $UP == "0" ]]; do
-			ISDONE=`nc done 40001`
-			if [[ $ISDONE == "DONE" ]]; then
-				UP=1
-			else
-				echo "Still waiting..."
-			fi
-			sleep 10
-		done
-		echo "=> Database is ready; resuming startup..."
 	else
 		export JAVA_OPTS="$JAVA_OPTS -Diiq.hostname=iiq1"
 	fi
@@ -245,6 +236,8 @@ then
 		cd /opt/sql
 		unzip -q employees.zip
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /opt/sql/employees.sql
+
+		echo "=> Importing example target system"
 		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < /opt/sql/target.sql
 
 		# It is okay if this fails
@@ -253,12 +246,6 @@ then
 
 	# Import init.xml, etc
 	importIIQObjects;
-
-	# Done service will only exist in the compose / swarm context
-	if [[ -z "${INIT_LOCAL}" ]]; then
-		# Flag the "done" service as done, which will allow the main servers to start
-		nc done 40000
-	fi
 fi
 
 if [[ -z "${INIT}" ]] || [[ ! -z "${INIT_LOCAL}" ]]

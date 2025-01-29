@@ -51,8 +51,12 @@ RUN chmod +x /*.sh && \
 
 FROM eclipse-temurin:11-jdk-focal as primary
 
-LABEL maintainer="Devin Rosenbauer <devin@identityworksllc.com>"
-MAINTAINER Devin Rosenbauer <devin@identityworksllc.com>
+LABEL maintainer="Devin Rosenbauer <devin@instrumentalid.com>"
+LABEL org.opencontainers.image.authors="Devin Rosenbauer <devin@instrumentalid.com>"
+LABEL org.opencontainers.image.documentation="https://github.com/drosenbauer/sailpoint-iiq-docker"
+LABEL org.opencontainers.image.source="https://github.com/drosenbauer/sailpoint-iiq-docker"
+LABEL org.opencontainers.image.vendor="Instrumental Identity"
+LABEL org.opencontainers.image.title="SailPoint IIQ"
 
 # All the OS updates
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh && \

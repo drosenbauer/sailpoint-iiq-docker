@@ -2,6 +2,7 @@
 
 # Install script to setup a new IIQ database with mssql
 # Environment variables:
+#   IIQ_VERSION
 #   MSSQL_HOST
 #   MSSQL_SA_USER
 #   MSSQL_SA_PASSWORD
@@ -41,16 +42,12 @@ then
 	if [[ ! -z "${IIQ_PATCH}" ]]; then 
 		echo "=> Checking for database upgrade scripts..."
 		cd /opt/tomcat/webapps/identityiq/WEB-INF/database/
-		if [[ -e upgrade_identityiq_tables.sqlserver ]]; then
-			echo "=> Installing custom upgrade script upgrade_identityiq_tables.sqlserver"
-			sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASSWORD} -S ${MSSQL_HOST} -i upgrade_identityiq_tables.sqlserver
-		else
-			for upgrade in `ls upgrade_identityiq_tables-${IIQ_VERSION}*.sqlserver | sort`
-			do
-				echo "=> Installing upgrade $upgrade"
-				sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASSWORD} -S ${MSSQL_HOST} -i $upgrade
-			done
-		fi
+
+		for upgrade in $(ls upgrade_identityiq_tables-${IIQ_VERSION}*.sqlserver | sort)
+		do
+			echo "=> Installing patch upgrade $upgrade"
+			sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASSWORD} -S ${MSSQL_HOST} -i $upgrade
+		done
 	fi
 	
 	if [ -z "${SKIP_DEMO_IMPORT}" ]

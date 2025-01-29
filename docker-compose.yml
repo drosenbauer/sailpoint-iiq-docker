@@ -1,9 +1,8 @@
+name: iiqstack
+
 services:
   counter:
     image: drosenbauer/docker-counter
-
-  done:
-    image: drosenbauer/docker-done
 
   ssh:
     image: drosenbauer/docker-ssh-host
@@ -27,6 +26,17 @@ services:
       - 8443:443
     environment:
       - PHPLDAPADMIN_LDAP_HOSTS=ldap
+
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.activemq.entrypoints=web"
+        - "traefik.http.routers.activemq.service=activemq"
+        - "traefik.http.routers.activemq.rule=PathPrefix(`/activemq`)"
+        - "traefik.http.services.activemq.loadbalancer.server.port=8161"
+        - "traefik.http.services.activemq.loadbalancer.server.scheme=http"
+        - "traefik.http.services.activemq.loadbalancer.sticky.cookie=true"    
 
   db:
     image: mcr.microsoft.com/mssql/server:2019-latest
@@ -61,20 +71,27 @@ services:
       - traefik.enable=false
 
   loadbalancer:
-    image: traefik:1.7
-    # Switch the following two commands for Swarm mode
-    #command: --docker --docker.swarmMode --docker.domain=traefik --docker.watch --api --web
-    command: --api --docker --web --logLevel=DEBUG
+    image: traefik:3.2.0
+    command:
+      - "--providers.docker=true" 
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--log.level=DEBUG" 
+      - "--accesslog=true"
+      - "--accesslog.addinternals"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
     ports:
       - "${LISTEN_PORT:-8080}:80"      # The HTTP port
-      - "28080:8080"  # The Web UI (enabled by --api)
+      - "28080:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
+      - "/var/run/docker.sock:/var/run/docker.sock:ro" # So that Traefik can listen to the Docker events
     labels:
-        - traefik.enable=false
+        - "traefik.enable=false"
 
   iiq:
-    build: ./iiq-build
+    build: ./iiq-build/
     image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:${TAG:-latest}
     environment:
       - DATABASE_TYPE=${IIQ_DB_TYPE:-mssql}
@@ -88,22 +105,33 @@ services:
       - MYSQL_PASSWORD=identityiq
       - MYSQL_DATABASE=identityiq
       - MYSQL_ROOT_PASSWORD=password
-      - IIQ_VERSION=8.3
-      - IIQ_PATCH=${IIQ_PATCH:-}
       - CATALINA_OPTS=-Xmx2048M
+    deploy:
+      mode: replicated
+      replicas: ${IIQ_REPLICAS:-2}
     depends_on:
-      - done
-      - counter
-      - db
-      - db_mysql
-      - mail
-      - ldap
+      counter:
+          condition: service_started
+      db:
+          condition: service_started
+      db_mysql:
+          condition: service_started
+      mail:
+          condition: service_started
+      ldap:
+          condition: service_started
+      iiq-init:
+          condition: service_completed_successfully
+      activemq:
+          condition: service_started
     labels:
-        - traefik.backend=iiq
-        - traefik.port=8080
-        - traefik.docker.network=frontend
-        - "traefik.frontend.rule=PathPrefix:/identityiq"
-        - "traefik.backend.loadbalancer.sticky=true"
+        - "traefik.enable=true"
+        - "traefik.http.routers.iiq.entrypoints=web"
+        - "traefik.http.routers.iiq.service=iiq"
+        - "traefik.http.routers.iiq.rule=PathPrefix(`/identityiq`)"
+        - "traefik.http.services.iiq.loadbalancer.server.port=8080"
+        - "traefik.http.services.iiq.loadbalancer.server.scheme=http"
+        - "traefik.http.services.iiq.loadbalancer.sticky.cookie=true"
 
   iiq-init:
     image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:${TAG:-latest}
@@ -119,11 +147,8 @@ services:
       - MYSQL_PASSWORD=identityiq
       - MYSQL_DATABASE=identityiq
       - MYSQL_ROOT_PASSWORD=password
-      - IIQ_VERSION=7.2
-      - IIQ_PATCH=${IIQ_PATCH:-}
       - INIT=y
     depends_on:
-      - done
       - db
       - db_mysql
       - mail

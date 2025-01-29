@@ -37,16 +37,12 @@ then
 
 	echo "=> Done creating database, checking for upgrades..."
 	cd /opt/tomcat/webapps/identityiq/WEB-INF/database/
-	if [[ -e upgrade_identityiq_tables.mysql ]]; then
-		echo "=> Installing custom upgrade script"
-		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < upgrade_identityiq_tables.mysql
-	else
-		for upgrade in `ls upgrade_identityiq_tables-${IIQ_VERSION}*.mysql | sort`
-		do
-			echo "=> Installing upgrade $upgrade"
-			mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < $upgrade
-		done
-	fi
+
+	for upgrade in $(ls upgrade_identityiq_tables-${IIQ_VERSION}*.mysql | sort)
+	do
+		echo "=> Installing patch upgrade $upgrade"
+		mysql -uroot -p${MYSQL_ROOT_PASSWORD} -h${MYSQL_HOST} < $upgrade
+	done
 	
 	if [ -z "${SKIP_DEMO_IMPORT}" ]
 	then
