@@ -156,22 +156,22 @@ if [[ ! -z $SSB ]]; then
 	fi
 fi
 
-ANT=`which ant`
-if [[ -z ${ANT} ]]; then
-	redecho "The 'ant' executable is not available on your path"
-	exit 2
-fi
-
-JAVA=`which java`
-if [[ -z ${JAVA} ]]; then
-	redecho "The 'java' executable is not available on your path"
-	exit 3
-fi
-
 if [[ ! -z ${SSB} ]]; then
 	greenecho " => SSB configuration -- "
 	echo "   SSB build: ${SSB}/build.xml"
 	echo "   SSB SPTARGET: ${SPTARGET}"
+
+	ANT=`which ant`
+	if [[ -z ${ANT} ]]; then
+		redecho "The 'ant' executable is not available on your path"
+		exit 2
+	fi
+
+	JAVA=`which java`
+	if [[ -z ${JAVA} ]]; then
+		redecho "The 'java' executable is not available on your path"
+		exit 3
+	fi
 fi
 
 if [[ ! -z $IIQ_ZIP ]]; then
@@ -260,6 +260,12 @@ done
 
 greenecho " => Building Docker containers, please wait a minute or two..."
 docker compose --progress quiet build
+
+if [[ "$?" -gt 0 ]]; then
+	redecho "Docker build failed, see above for details"
+	exit 10
+fi
+
 greenecho " => Default image name: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest"
 
 if [[ ! -z "${LABEL}" ]]; then
