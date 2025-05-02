@@ -1,0 +1,371 @@
+# Kubernetes Deployment Bundle for SailPoint IdentityIQ on K3s
+
+# --- LDAP Deployment ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ldap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ldap
+  template:
+    metadata:
+      labels:
+        app: ldap
+    spec:
+      enableServiceLinks: false 
+      containers:
+      - name: ldap
+        image: osixia/openldap:1.5.0
+        ports:
+        - containerPort: 389
+        env:
+        - name: LDAP_DOMAIN
+          value: sailpoint.demo
+        - name: LDAP_ORGANISATION
+          value: Sailpoint Demo
+        - name: LDAP_ADMIN_PASSWORD
+          value: spadmin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ldap
+spec:
+  selector:
+    app: ldap
+  ports:
+  - port: 389
+    targetPort: 389
+
+---
+# --- phpLDAPadmin ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phpldapadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phpldapadmin
+  template:
+    metadata:
+      labels:
+        app: phpldapadmin
+    spec:
+      containers:
+      - name: phpldapadmin
+        image: osixia/phpldapadmin
+        ports:
+        - containerPort: 443
+        env:
+        - name: PHPLDAPADMIN_LDAP_HOSTS
+          value: ldap
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phpldapadmin
+spec:
+  selector:
+    app: phpldapadmin
+  ports:
+  - port: 443
+    targetPort: 443
+
+---
+# --- Mailpit ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailpit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mailpit
+  template:
+    metadata:
+      labels:
+        app: mailpit
+    spec:
+      containers:
+      - name: mailpit
+        image: axllent/mailpit
+        ports:
+        - containerPort: 1025
+        - containerPort: 8025
+        env:
+        - name: MP_MAX_MESSAGES
+          value: "5000"
+        - name: MP_DATABASE
+          value: /data/mailpit.db
+        - name: MP_SMTP_AUTH_ACCEPT_ANY
+          value: "1"
+        - name: MP_SMTP_AUTH_ALLOW_INSECURE
+          value: "1"
+        volumeMounts:
+        - name: mailpit-data
+          mountPath: /data
+      volumes:
+      - name: mailpit-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailpit
+spec:
+  selector:
+    app: mailpit
+  ports:
+  - name: smtp
+    port: 1025
+    targetPort: 1025
+  - name: http
+    port: 8025
+    targetPort: 8025
+---
+# --- MSSQL Database ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mssql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mssql
+  template:
+    metadata:
+      labels:
+        app: mssql
+    spec:
+      containers:
+      - name: mssql
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          value: id3ntityIQ!-TQ8BaiOxKAL4v-4lCIxVx
+        - name: MSSQL_PID
+          value: Developer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mssql
+spec:
+  selector:
+    app: mssql
+  ports:
+  - port: 1433
+    targetPort: 1433
+---
+# --- MySQL Database ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: password
+        - name: MYSQL_DATABASE
+          value: identityiq
+        - name: MYSQL_USER
+          value: identityiq
+        - name: MYSQL_PASSWORD
+          value: identityiq
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+---
+# --- ActiveMQ Artemis ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: activemq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: activemq
+  template:
+    metadata:
+      labels:
+        app: activemq
+    spec:
+      containers:
+      - name: activemq
+        image: apache/activemq-artemis:latest-alpine
+        ports:
+        - containerPort: 8161
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: activemq
+spec:
+  selector:
+    app: activemq
+  ports:
+  - port: 8161
+    targetPort: 8161
+
+# (Part 1 of the deployment bundle. IdentityIQ and Ingress with Traefik are next.)
+# Kubernetes Deployment Bundle for SailPoint IdentityIQ on K3s
+
+# --- LDAP Deployment ---
+...
+# --- ActiveMQ Artemis ---
+...
+
+# --- IdentityIQ Init Job ---
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: iiq-init
+spec:
+  template:
+    metadata:
+      labels:
+        app: iiq-init
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: iiq-init
+        image: 192.168.0.236:5000/sailpoint-docker:latest #Use your pre-built IIQ image from Local Registry
+        env:
+        - name: MSSQL_HOST
+          value: mssql
+        - name: MSSQL_SA_USER
+          value: sa
+        - name: MSSQL_SA_PASSWORD
+          value: id3ntityIQ!-TQ8BaiOxKAL4v-4lCIxVx
+        - name: MYSQL_HOST
+          value: mysql
+        - name: MYSQL_USER
+          value: identityiq
+        - name: MYSQL_PASSWORD
+          value: identityiq
+        - name: MYSQL_DATABASE
+          value: identityiq
+        - name: INIT
+          value: "y"
+---
+
+# --- IdentityIQ Deployment ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identityiq
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: identityiq
+  template:
+    metadata:
+      labels:
+        app: identityiq
+    spec:
+      containers:
+      - name: identityiq
+        image: 192.168.0.236:5000/sailpoint-docker:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MSSQL_HOST
+          value: mssql
+        - name: MSSQL_SA_USER
+          value: sa
+        - name: MSSQL_SA_PASSWORD
+          value: id3ntityIQ!-TQ8BaiOxKAL4v-4lCIxVx
+        - name: MYSQL_HOST
+          value: mysql
+        - name: MYSQL_USER
+          value: identityiq
+        - name: MYSQL_PASSWORD
+          value: identityiq
+        - name: MYSQL_DATABASE
+          value: identityiq
+        - name: CATALINA_OPTS
+          value: -Xmx2048M
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identityiq
+spec:
+  selector:
+    app: identityiq
+  ports:
+  - port: 8080
+    targetPort: 8080
+
+---
+# --- Traefik IngressRoute for IdentityIQ ---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: identityiq
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: PathPrefix(`/identityiq`)
+    kind: Rule
+    services:
+    - name: identityiq
+      port: 8080
+      sticky:
+        cookie: {}
+
+---
+# --- Traefik IngressRoute for ActiveMQ ---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: activemq
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: PathPrefix(`/activemq`)
+    kind: Rule
+    services:
+    - name: activemq
+      port: 8161
+      sticky:
+        cookie: {}
