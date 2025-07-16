@@ -1,15 +1,19 @@
-FROM eclipse-temurin:11-jdk-focal as iiqCommon
+FROM eclipse-temurin:17-jdk-jammy AS iiqcstage
 
 WORKDIR /
 
 COPY fetch-package.sh ./
+
+RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::http::No-Cache true;" >> /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y git jq curl ca-certificates unzip && \
     chmod +x fetch-package.sh && \
     ./fetch-package.sh
 
-FROM tomcat:9-jdk11-temurin-focal as tomcat
+FROM tomcat:9-jdk17-temurin-jammy AS tomcat
 
 RUN mv /usr/local/tomcat /opt/tomcat && \
     mv /opt/tomcat/webapps.dist/manager /opt/tomcat/webapps
@@ -35,7 +39,7 @@ RUN mkdir -p /opt/iiq && \
     mkdir -p /etc/mysql/conf.d
 
 COPY sailpoint/identityiq.war /opt/iiq/identityiq.war
-COPY --from=iiqCommon ./iiq-common-public.jar /opt/iiq/lib/iiq-common-public.jar
+COPY --from=iiqcstage ./iiq-common-public.jar /opt/iiq/lib/iiq-common-public.jar
 COPY src/ /opt/iiq/
 
 COPY index.html /opt/tomcat/webapps/ROOT
@@ -49,7 +53,7 @@ RUN chmod +x /*.sh && \
     /import-certs.sh && \
     cp /opt/iiq/bootstrap.ldif /bootstrap.ldif
 
-FROM eclipse-temurin:11-jdk-focal as primary
+FROM eclipse-temurin:17-jdk-jammy AS primary
 
 LABEL maintainer="Devin Rosenbauer <devin@instrumentalid.com>"
 LABEL org.opencontainers.image.authors="Devin Rosenbauer <devin@instrumentalid.com>"
@@ -58,10 +62,15 @@ LABEL org.opencontainers.image.source="https://github.com/drosenbauer/sailpoint-
 LABEL org.opencontainers.image.vendor="Instrumental Identity"
 LABEL org.opencontainers.image.title="SailPoint IIQ"
 
+RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::http::No-Cache true;" >> /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
+
 # All the OS updates
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh && \
+    rm -rf /var/lib/apt/lists/* && \
     apt-get update && \
-    apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat curl supervisor nano less ldap-utils apt-transport-https gnupg libaio1 libaio-dev && \
+    apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat-traditional curl supervisor nano less ldap-utils apt-transport-https gnupg libaio1 && \
     curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
     apt-get update && \
@@ -78,9 +87,9 @@ COPY --from=tomcat *.sh /
 COPY --from=tomcat *.ldif /
 COPY my.cnf /etc/mysql
 
-ENV CATALINA_HOME /opt/tomcat
-ENV CATALINA_BASE /opt/tomcat
-ENV PATH $PATH:$CATALINA_HOME/bin
+ENV CATALINA_HOME=/opt/tomcat
+ENV CATALINA_BASE=/opt/tomcat
+ENV PATH=$PATH:$CATALINA_HOME/bin
 
 EXPOSE 22 8009 8080
 WORKDIR /opt/tomcat
