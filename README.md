@@ -231,6 +231,48 @@ Additionally, you will be able to use the `seri.sh` script to more easily push i
 
 If the IIQ Accelerator Pack is detected via the XML file `WEB-INF/config/init-acceleratorpack.xml`, it will be automatically imported.
 
+
+# Run on Kubernetes Cluster
+
+## Find the Traefik IP
+Since you're using K3s, if Traefik is running as a service (which it usually does), get its external IP or the node IP it's listening on:
+```bash
+kubectl get svc -n kube-system
+
+```
+
+Look for a service like `traefik` with `type: LoadBalancer` or NodePort.
+
+If you're using `NodePort`, Traefik is accessible via any node’s IP on the exposed port (default: 80).
+
+## 🌐 Access in Browser
+
+```text
+http://<node-ip>/identityiq
+
+```
+Example :
+
+```text
+http://192.168.0.100/identityiq
+
+```
+Replace `192.168.0.100` with the actual IP of your control plane or worker node if Traefik is listening there.
+
+```text
+kubectl get pods -A
+NAMESPACE     NAME                                      READY   STATUS    RESTARTS       AGE
+default       activemq-6997d7f844-jc292                 1/1     Running   0              31m
+default       identityiq-c67665f8d-82ljl                1/1     Running   0              31m
+default       identityiq-c67665f8d-8cv79                1/1     Running   0              31m
+default       iiq-init-5lpnp                            1/1     Running   0              31m
+default       ldap-678f8f6888-2v9f6                     1/1     Running   0              19m
+default       mailpit-557cbc9466-np7md                  1/1     Running   0              26m
+default       mssql-65c4978586-d4c9q                    1/1     Running   0              31m
+default       mysql-79b97f6bc7-6qj9x                    1/1     Running   0              31m
+default       phpldapadmin-7bddd988fb-7plrw             1/1     Running   0              31m
+kube-system   coredns-ff8999cc5-kl4ph                   1/1     Running   5 (13h ago)    5d23h
+```
 # Acknowledgement
 
 This codebase is inspired by and partially derived from the sailpoint-iiq Docker project by [Steffen Sperling](https://community.sailpoint.com/people/ssperling): https://github.com/steffensperling/sailpoint-iiq
