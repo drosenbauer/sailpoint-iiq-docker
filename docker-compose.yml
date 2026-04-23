@@ -3,9 +3,11 @@ name: iiqstack
 services:
   counter:
     image: drosenbauer/docker-counter
+    platform: linux/amd64
 
   ssh:
     image: drosenbauer/docker-ssh-host
+    platform: linux/amd64
     labels:
       - traefik.enable=false
 
@@ -40,6 +42,7 @@ services:
 
   db:
     image: mcr.microsoft.com/mssql/server:2019-latest
+    platform: linux/amd64
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=id3ntityIQ!-TQ8BaiOxKAL4v-4lCIxVx
