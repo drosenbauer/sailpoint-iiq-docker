@@ -2,6 +2,9 @@
 
 source bin/include/utils.sh
 
+SECONDS=0
+ui_intro "IdentityIQ Docker build"
+
 mkdir -p build
 
 PLUGINS=()
@@ -9,6 +12,62 @@ PATCHES=()
 HOTFIXES=()
 TRUSTEDCERTS=()
 OBJECTS=()
+
+usage() {
+	ui_section "Usage"
+	ui_kv "-z" "IdentityIQ distribution zip"
+	ui_kv "-w" "Existing identityiq.war"
+	ui_kv "-b" "SSB build directory or Git repository"
+	ui_kv "-t" "SSB SPTARGET (default: sandbox)"
+	ui_kv "-p" "Patch jar (repeatable)"
+	ui_kv "-e" "Efix archive (repeatable)"
+	ui_kv "-m" "Plugin zip (repeatable)"
+	ui_kv "-o" "Objects file or directory (repeatable)"
+	ui_kv "-c" "Trusted certificate (repeatable)"
+	ui_kv "-l" "Image label"
+	ui_kv "-s" "Skip demo company data"
+}
+
+# Comma-separated file names of the given paths
+names() {
+	local out="" f
+	for f in "$@"; do
+		out+="${out:+, }$(basename "$f")"
+	done
+	printf '%s' "$out"
+}
+
+# These run under ui_run, i.e. in a subshell, so they can cd freely
+checkout_ssb() {
+	cd "${BUILD}/tmp" || return 1
+	# This operation is expensive, see if the repo is the same as last time and don't delete if it is
+	if [[ -e ./repo ]]; then
+		OLDREPO=`cat ./repo`
+		if [[ -e ssb ]] && [[ "${SSB}" != "${OLDREPO}" ]]; then
+			# Refresh
+			rm -rf ssb/*
+			git clone "${SSB}" ssb || return 1
+		else
+			# Update
+			cd ssb && git pull
+		fi
+	else
+		# New
+		git clone "${SSB}" ssb || return 1
+	fi
+	echo "${SSB}" > "${BUILD}/tmp/repo"
+}
+
+build_ssb() {
+	cd "${SSB}" && mkdir -p build && ant clean war
+}
+
+extract_zip() {
+	cd "${BUILD}" || return 1
+	unzip -qo "$IIQ_ZIP"
+	# Exit code 1 is only a warning
+	[[ "$?" -le 1 ]]
+}
 
 while getopts ":b:t:z:w:m:e:p:s:o:l:c:" opt; do
   case ${opt} in
@@ -39,59 +98,69 @@ while getopts ":b:t:z:w:m:e:p:s:o:l:c:" opt; do
       ;;
     w ) IIQ_WAR=${OPTARG}
       ;;
-    \? ) echo "Usage: ./build.sh [-b <existing SSB build directory>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>]"
-      echo "                 [-m <plugin zip>]... [-p <patch jar>]... [-e <efix>]... [-o <objects file or dir>]..."
-      echo "                 [-c <trusted certificate>]... [-l <image label>] [-s]"
-      exit 5
+    \? ) ui_err "Unknown option -${OPTARG}"
+      usage
+      ui_die 5 "Invalid usage"
       ;;
-    : ) redecho "Option -${OPTARG} requires an argument"
-      exit 5
+    : ) ui_die 5 "Option -${OPTARG} requires an argument"
       ;;
   esac
 done
 
-if [[ ! -z "${LABEL}" ]]; then
-	greenecho " => Using image tag ${LABEL}"
-fi
-
-
 # Validate WAR locator inputs
 if [[ -z "$SSB" ]] && [[ -z "$IIQ_ZIP" ]] && [[ -z "$IIQ_WAR" ]]; then
-	echo "You must specify an IIQ zip (-z), an IIQ war (-w), or an SSB build directory (-b)"
-	exit 5
+	ui_err "You must specify an IIQ zip (-z), an IIQ war (-w), or an SSB build directory (-b)"
+	usage
+	ui_die 5 "Nothing to build"
 fi
 
 # Validate incompatible inputs
 if [[ ! -z "$SSB" ]] && [[ ! -z "$IIQ_ZIP" ]]; then
-	echo "The zip (-z) and build (-b) options are mutually exclusive and you specified both"
-	exit 5
+	ui_die 5 "The zip (-z) and build (-b) options are mutually exclusive and you specified both"
 fi
 
 # Validate specified locations
 if [[ ! -z "$IIQ_ZIP" ]] && [[ ! -e "$IIQ_ZIP" ]]; then
-	redecho "IIQ zip file $IIQ_ZIP does not exist"
-	exit 5
+	ui_die 5 "IIQ zip file $IIQ_ZIP does not exist"
 fi
 
 if [[ ! -z "$IIQ_WAR" ]] && [[ ! -e "$IIQ_WAR" ]]; then
-	redecho "IIQ war file $IIQ_WAR does not exist"
-	exit 5
+	ui_die 5 "IIQ war file $IIQ_WAR does not exist"
 fi
 
 for plugin in "${PLUGINS[@]}"
 do
 	if [[ ! -e "$plugin" ]]; then
-		redecho "Cannot find plugin $plugin"
-		exit 5
+		ui_die 5 "Cannot find plugin $plugin"
 	fi
 done
 
 if ! docker compose version > /dev/null 2>&1; then
-	redecho "Cannot find the 'docker compose' command"
-	exit 5
+	ui_die 5 "Cannot find the 'docker compose' command"
 fi
 
-greenecho " => Creating and cleaning build directory"
+if [[ ! -z "${SSB}" ]] && [[ -z "${SPTARGET}" ]]; then
+	ui_warn "SSB specified but no SPTARGET defined; using 'sandbox' by default"
+	SPTARGET=sandbox
+fi
+
+ui_section "Configuration"
+if [[ ! -z "${SSB}" ]]; then
+	ui_kv "Source" "SSB build ${SSB}"
+	ui_kv "Target" "${SPTARGET}"
+elif [[ ! -z "${IIQ_ZIP}" ]]; then
+	ui_kv "Source" "IIQ zip $(basename "${IIQ_ZIP}")"
+else
+	ui_kv "Source" "IIQ war $(basename "${IIQ_WAR}")"
+fi
+[[ ${#PATCHES[@]} -gt 0 ]] && ui_kv "Patches" "$(names "${PATCHES[@]}")"
+[[ ${#HOTFIXES[@]} -gt 0 ]] && ui_kv "Efixes" "$(names "${HOTFIXES[@]}")"
+[[ ${#PLUGINS[@]} -gt 0 ]] && ui_kv "Plugins" "$(names "${PLUGINS[@]}")"
+[[ ${#TRUSTEDCERTS[@]} -gt 0 ]] && ui_kv "Certs" "$(names "${TRUSTEDCERTS[@]}")"
+[[ ${#OBJECTS[@]} -gt 0 ]] && ui_kv "Objects" "$(names "${OBJECTS[@]}")"
+[[ ! -z "${LABEL}" ]] && ui_kv "Label" "${LABEL}"
+
+ui_section "Preparing"
 HERE=`pwd`
 mkdir -p "${HERE}/build/tmp"
 BUILD="${HERE}/build"
@@ -100,12 +169,13 @@ BUILD="${HERE}/build"
 # Only clear it if it is really the 'build' folder next to this script (not a symlink, not the wrong cwd)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 if [[ -L "${BUILD}" ]] || [[ ! -d "${BUILD}" ]] || [[ "$(cd "${BUILD}" && pwd -P)" != "${SCRIPT_DIR}/build" ]]; then
-	redecho "Refusing to clear ${BUILD}; it is not the 'build' directory next to build.sh (${SCRIPT_DIR}). Run this script from the repository directory."
-	exit 4
+	ui_die 4 "Refusing to clear ${BUILD}; it is not the 'build' directory next to build.sh (${SCRIPT_DIR}). Run this script from the repository directory."
 fi
 find "${BUILD}" -mindepth 1 ! -path "${BUILD}/tmp" ! -path "${BUILD}/tmp/*" -delete
 
-greenecho " => Build directory is ${BUILD}"
+# Output of long-running steps goes here
+UI_LOG="${BUILD}/build.log"
+ui_ok "Build directory cleaned" "build/"
 
 IIQ_VERSION=
 IIQ_PATCH=
@@ -113,47 +183,19 @@ IIQ_PATCH=
 # Sanity checking for optional SSB build
 if [[ ! -z "$SSB" ]]; then
 	if [[ ! -z $(echo "${SSB}" | grep "git\\.") ]]; then
-		greenecho " => SSB looks like a Git repo, checking it out to the 'build/tmp/ssb' folder..."
-		pushd "${BUILD}/tmp"
-		# This operation is expensive, see if the repo is the same as last time and don't delete if it is
-		if [[ -e ./repo ]]; then
-			OLDREPO=`cat ./repo`
-			if [[ -e ssb ]] && [[ "${SSB}" != "${OLDREPO}" ]]; then
-				# Refresh
-				rm -rf ssb/*
-				git clone "${SSB}" ssb
-			else
-				# Update
-				pushd ssb
-				git pull
-				popd
-			fi
-		else
-			# New
-			git clone "${SSB}" ssb
-		fi
-		echo "${SSB}" > ./repo
+		ui_run "Checking out SSB from Git" checkout_ssb || ui_die 1 "Could not check out ${SSB}; see build/build.log"
 		SSB="${BUILD}/tmp/ssb"
-		popd
-		greenecho " => SSB checked out from Git"
 	fi
 	SSB="${SSB%/}"
 	if [[ ! -f "${SSB}/build.xml" ]]; then
-		redecho "Option -b directory '${SSB}' does not contain a build.xml"
-		exit 1
-	fi
-
-	if [[ -z "${SPTARGET}" ]]; then
-	        redecho " !! SSB specified but no SPTARGET defined; using 'sandbox' by default"
-	        SPTARGET=sandbox
+		ui_die 1 "Option -b directory '${SSB}' does not contain a build.xml"
 	fi
 
 	BUILD_PROPERTIES="${SSB}/build.properties"
 	if [[ ! -e "${BUILD_PROPERTIES}" ]]; then
 		BUILD_PROPERTIES="${SSB}/${SPTARGET}.build.properties"
 		if [[ ! -e "${BUILD_PROPERTIES}" ]]; then
-			redecho "No build.properties or ${SPTARGET}.build.properties found"
-			exit 1
+			ui_die 1 "No build.properties or ${SPTARGET}.build.properties found"
 		fi
 	fi
 
@@ -163,25 +205,17 @@ if [[ ! -z "$SSB" ]]; then
 
 	if [[ ! -z "${IIQ_PATCHLEVEL}" ]]; then
 		IIQ_PATCH="$IIQ_VERSION$IIQ_PATCHLEVEL"
-		greenecho " => Identified IIQ patch $IIQ_PATCH"
+		ui_info "Identified IIQ patch $IIQ_PATCH"
 	fi
-fi
-
-if [[ ! -z "${SSB}" ]]; then
-	greenecho " => SSB configuration -- "
-	echo "   SSB build: ${SSB}/build.xml"
-	echo "   SSB SPTARGET: ${SPTARGET}"
 
 	ANT=`which ant`
 	if [[ -z "${ANT}" ]]; then
-		redecho "The 'ant' executable is not available on your path"
-		exit 2
+		ui_die 2 "The 'ant' executable is not available on your path"
 	fi
 
 	JAVA=`which java`
 	if [[ -z "${JAVA}" ]]; then
-		redecho "The 'java' executable is not available on your path"
-		exit 3
+		ui_die 3 "The 'java' executable is not available on your path"
 	fi
 fi
 
@@ -190,33 +224,25 @@ if [[ ! -z "$IIQ_ZIP" ]]; then
 fi
 
 # Start building
+ui_section "Source"
 if [[ ! -z "${SSB}" ]]; then
-	greenecho " => Building SSB..."
 	export SPTARGET
-	pushd "${SSB}"
-	mkdir -p build
-	ant clean war >> "${BUILD}/build.log" 2>&1
-	if [[ ! -e build/deploy/identityiq.war ]]; then
-		redecho "The SSB build does not appear to have produced an identityiq.war; please see the build.log for details"
-		exit 9
+	ui_run "Building SSB" build_ssb
+	if [[ ! -e "${SSB}/build/deploy/identityiq.war" ]]; then
+		ui_die 9 "The SSB build does not appear to have produced an identityiq.war; please see build/build.log for details"
 	fi
-	cp build/deploy/identityiq.war "${BUILD}" 2> /dev/null
-	popd
+	cp "${SSB}/build/deploy/identityiq.war" "${BUILD}" 2> /dev/null
 else
 	if [[ ! -z "$IIQ_ZIP" ]]; then
-		greenecho " => No SSB; extracting WAR from identityiq ZIP file"
-		pushd "${BUILD}"
-		unzip -qo "$IIQ_ZIP"
-		popd
+		ui_run "Extracting WAR from IIQ zip" extract_zip || ui_die 9 "Failed to extract $IIQ_ZIP"
 	else
-		greenecho " => Using IIQ WAR at ${IIQ_WAR}"
 		cp "${IIQ_WAR}" "${BUILD}/identityiq.war"
+		ui_ok "Using IIQ WAR" "$(basename "${IIQ_WAR}")"
 	fi
 fi
 
 if [[ ! -e "${BUILD}/identityiq.war" ]]; then
-	redecho "The build directory does not contain an identityiq.war"
-	exit 9
+	ui_die 9 "The build directory does not contain an identityiq.war"
 fi
 
 cp "${BUILD}/identityiq.war" iiq-build/sailpoint/
@@ -226,19 +252,17 @@ pushd "${BUILD}"
 unzip -qo "${BUILD}/identityiq.war" WEB-INF/lib/identityiq.jar
 if [[ ! -e "${BUILD}/WEB-INF/lib/identityiq.jar" ]]; then
 	popd
-	redecho "Failed to extract identityiq.jar"
-	exit 9
+	ui_die 9 "Failed to extract identityiq.jar"
 fi
 popd
 
 IIQ_VERSION=$(unzip -p "${BUILD}/WEB-INF/lib/identityiq.jar" META-INF/MANIFEST.MF | grep Implementation-Version | awk -F " " '{print $2}' | tr -d '\r')
 
 if [[ -z "${IIQ_VERSION}" ]]; then
-	redecho "Could not determine the IIQ version from WEB-INF/lib/identityiq.jar in the WAR"
-	exit 9
+	ui_die 9 "Could not determine the IIQ version from WEB-INF/lib/identityiq.jar in the WAR"
 fi
 
-greenecho " => IIQ version $IIQ_VERSION"
+ui_ok "Detected IIQ version ${IIQ_VERSION}"
 
 mkdir -p iiq-build/src/patch
 mkdir -p iiq-build/src/efix
@@ -258,56 +282,64 @@ touch iiq-build/src/plugins/.keep
 touch iiq-build/src/certs/.keep
 touch iiq-build/src/objects/.keep
 
+if [[ ${#PATCHES[@]} -gt 0 ]] || [[ ${#HOTFIXES[@]} -gt 0 ]] || [[ ${#PLUGINS[@]} -gt 0 ]] || [[ ${#TRUSTEDCERTS[@]} -gt 0 ]] || [[ ${#OBJECTS[@]} -gt 0 ]]; then
+	ui_section "Staging"
+fi
+
 for patch in "${PATCHES[@]}"
 do
-	greenecho " => Including patch archive $patch"
 	cp "$patch" "iiq-build/src/patch"
+	ui_ok "Patch archive" "$(basename "$patch")"
 done
 
 for efix in "${HOTFIXES[@]}"
 do
-	greenecho " => Including efix archive $efix"
 	cp "$efix" "iiq-build/src/efix"
+	ui_ok "Efix archive" "$(basename "$efix")"
 done
 
 for plugin in "${PLUGINS[@]}"
 do
-	greenecho " => Including plugin archive $plugin"
 	cp "$plugin" "iiq-build/src/plugins"
+	ui_ok "Plugin archive" "$(basename "$plugin")"
 done
 
 for cert in "${TRUSTEDCERTS[@]}"
 do
-	greenecho " => Including trusted SSL certificate $cert"
 	cp "$cert" "iiq-build/src/certs"
+	ui_ok "Trusted SSL certificate" "$(basename "$cert")"
 done
 
 for object in "${OBJECTS[@]}"
 do
-	greenecho " => Including object(s) from ${object}"
 	cp -rf "$object" "iiq-build/src/objects"
+	ui_ok "Objects" "$(basename "$object")"
 done
 
+ui_section "Docker"
 IIQ_MAJOR="${IIQ_VERSION%%.*}"
 if [[ "${IIQ_MAJOR}" =~ ^[0-9]+$ ]] && (( IIQ_MAJOR >= 9 )); then
 	export TOMCAT_VERSION=10-jdk21-temurin-noble
 	export JDK_VERSION=21-jdk-noble
-	greenecho " => Using Tomcat 10 for IIQ 9+"
-fi
-greenecho " => Building Docker containers, please wait a minute or two..."
-docker compose --progress quiet build
-
-if [[ "$?" -gt 0 ]]; then
-	redecho "Docker build failed, see above for details"
-	exit 10
+	ui_info "Using Tomcat 10 for IIQ 9+"
 fi
 
-greenecho " => Default image name: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest"
+IMAGE=git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker
+ui_info "This usually takes a minute or two" "full output in build/build.log"
+ui_run "Building Docker images" docker compose --progress plain build || ui_die 10 "Docker build failed; see build/build.log for details"
 
 if [[ ! -z "${LABEL}" ]]; then
-
-	greenecho " => Tagging image 'latest' with $LABEL"
-	docker tag git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:latest "git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:$LABEL"
+	docker tag "${IMAGE}:latest" "${IMAGE}:${LABEL}" || ui_die 10 "Failed to tag the image as ${LABEL}"
+	ui_ok "Tagged image 'latest' as ${LABEL}"
 fi
 
-greenecho " => All done!"
+ui_section "Image"
+ui_kv "Name" "${IMAGE}:latest"
+if [[ ! -z "${LABEL}" ]]; then
+	ui_kv "Tag" "${IMAGE}:${LABEL}"
+fi
+
+ui_section "Next steps"
+ui_info "Run ${C_BOLD}./start.sh${C_RESET} for a quick startup"
+
+ui_outro "Done in $(ui_elapsed ${SECONDS})"
