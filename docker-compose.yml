@@ -93,7 +93,11 @@ services:
         - "traefik.enable=false"
 
   iiq:
-    build: ./iiq-build/
+    build: 
+      context: ./iiq-build/
+      args:
+        - TOMCAT_VERSION=${TOMCAT_VERSION:-9-jdk17-temurin-jammy}
+        - JDK_VERSION=${JDK_VERSION:-17-jdk-jammy}
     image: git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker:${TAG:-latest}
     environment:
       - DATABASE_TYPE=${IIQ_DB_TYPE:-mssql}

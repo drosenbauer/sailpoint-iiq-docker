@@ -92,7 +92,9 @@ On a Linux or Linux-like infrastructure:
 
 The default stack name is `iiqstack`, so your containers will be named things like `iiqstack_db`.
 
-On startup, IIQ will be available on port 8080.
+On startup, IIQ will be available on port 8080, e.g., `http://localhost:8080/identityiq`. 
+
+NOTE: It may take a few moments after all of the containers start before the load balancer detects that all nodes are running. Before this, you will receive a 404 error.
 
 ### Initialization container
 

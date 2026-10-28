@@ -1,3 +1,6 @@
+ARG TOMCAT_VERSION=9-jdk17-temurin-jammy
+ARG JDK_VERSION=17-jdk-jammy
+
 FROM eclipse-temurin:17-jdk-jammy AS iiqcstage
 
 WORKDIR /
@@ -13,7 +16,7 @@ RUN apt-get update && \
     chmod +x fetch-package.sh && \
     ./fetch-package.sh
 
-FROM tomcat:9-jdk17-temurin-jammy AS tomcat
+FROM tomcat:${TOMCAT_VERSION} AS tomcat
 
 RUN mv /usr/local/tomcat /opt/tomcat && \
     mv /opt/tomcat/webapps.dist/manager /opt/tomcat/webapps
@@ -53,7 +56,7 @@ RUN chmod +x /*.sh && \
     /import-certs.sh && \
     cp /opt/iiq/bootstrap.ldif /bootstrap.ldif
 
-FROM eclipse-temurin:17-jdk-jammy AS primary
+FROM eclipse-temurin:${JDK_VERSION} AS primary
 
 LABEL maintainer="Devin Rosenbauer <devin@instrumentalid.com>"
 LABEL org.opencontainers.image.authors="Devin Rosenbauer <devin@instrumentalid.com>"
@@ -67,12 +70,17 @@ RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
     echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
 
 # All the OS updates
+# libaio1 was renamed libaio1t64 in Ubuntu 24.04 (noble); the Microsoft repo is keyed by Ubuntu version;
+# the 22.04 list has no signed-by, so the key also goes in trusted.gpg.d
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get update && \
-    apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat-traditional curl supervisor nano less ldap-utils apt-transport-https gnupg libaio1 && \
-    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-    curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat-traditional curl supervisor nano less ldap-utils apt-transport-https gnupg ca-certificates && \
+    (apt-get install --no-install-recommends -y libaio1t64 || apt-get install --no-install-recommends -y libaio1) && \
+    . /etc/os-release && \
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
+    cp /usr/share/keyrings/microsoft-prod.gpg /etc/apt/trusted.gpg.d/microsoft-prod.gpg && \
+    curl -fsSL https://packages.microsoft.com/config/ubuntu/${VERSION_ID}/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
     apt-get update && \
     apt-get install -y locales && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \

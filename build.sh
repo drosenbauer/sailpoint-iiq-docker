@@ -10,7 +10,7 @@ HOTFIXES=()
 TRUSTEDCERTS=()
 OBJECTS=()
 
-while getopts ":b:t:z:w:m:e:p:s:o:l:" opt; do
+while getopts ":b:t:z:w:m:e:p:s:o:l:c:" opt; do
   case ${opt} in
     l ) LABEL=${OPTARG}
       ;;
@@ -39,24 +39,30 @@ while getopts ":b:t:z:w:m:e:p:s:o:l:" opt; do
       ;;
     w ) IIQ_WAR=${OPTARG}
       ;;
-    \? ) echo "Usage: ./start.sh [-b <existing SSB build directory>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>]"
+    \? ) echo "Usage: ./build.sh [-b <existing SSB build directory>] [-t SPTARGET] [-z <identityIQ zip>] [-w <existing WAR file>]"
+      echo "                 [-m <plugin zip>]... [-p <patch jar>]... [-e <efix>]... [-o <objects file or dir>]..."
+      echo "                 [-c <trusted certificate>]... [-l <image label>] [-s]"
+      exit 5
+      ;;
+    : ) redecho "Option -${OPTARG} requires an argument"
+      exit 5
       ;;
   esac
 done
 
-if [[ ! -z $TAG ]]; then
+if [[ ! -z "${LABEL}" ]]; then
 	greenecho " => Using image tag ${LABEL}"
 fi
 
 
 # Validate WAR locator inputs
-if [[ -z $SSB ]] && [[ -z $IIQ_ZIP ]] && [[ -z $IIQ_WAR ]]; then
+if [[ -z "$SSB" ]] && [[ -z "$IIQ_ZIP" ]] && [[ -z "$IIQ_WAR" ]]; then
 	echo "You must specify an IIQ zip (-z), an IIQ war (-w), or an SSB build directory (-b)"
 	exit 5
 fi
 
 # Validate incompatible inputs
-if [[ ! -z $SSB ]] && [[ ! -z $IIQ_ZIP ]]; then
+if [[ ! -z "$SSB" ]] && [[ ! -z "$IIQ_ZIP" ]]; then
 	echo "The zip (-z) and build (-b) options are mutually exclusive and you specified both"
 	exit 5
 fi
@@ -67,32 +73,37 @@ if [[ ! -z "$IIQ_ZIP" ]] && [[ ! -e "$IIQ_ZIP" ]]; then
 	exit 5
 fi
 
-if [[ ! -z $IIQ_WAR ]] && [[ ! -e $IIQ_WAR ]]; then
+if [[ ! -z "$IIQ_WAR" ]] && [[ ! -e "$IIQ_WAR" ]]; then
 	redecho "IIQ war file $IIQ_WAR does not exist"
 	exit 5
 fi
 
 for plugin in "${PLUGINS[@]}"
 do
-	if [[ ! -e $plugin ]]; then
+	if [[ ! -e "$plugin" ]]; then
 		redecho "Cannot find plugin $plugin"
 		exit 5
 	fi
 done
 
-COMPOSE_PATH=$(which docker-compose)
-if [[ ! -z $(echo "$COMPOSE_PATH" | grep "not found") ]]; then
-	redecho "Cannot find the docker-compose command"
+if ! docker compose version > /dev/null 2>&1; then
+	redecho "Cannot find the 'docker compose' command"
 	exit 5
 fi
 
 greenecho " => Creating and cleaning build directory"
 HERE=`pwd`
-mkdir -p ${HERE}/build/tmp
+mkdir -p "${HERE}/build/tmp"
 BUILD="${HERE}/build"
-if [ -e "${BUILD}/identityiq.war" ]; then
-	rm "${BUILD}/identityiq.war"
+
+# Clear out anything left from a previous build (extracted zip contents, WEB-INF, build.log, etc.)
+# Only clear it if it is really the 'build' folder next to this script (not a symlink, not the wrong cwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ -L "${BUILD}" ]] || [[ ! -d "${BUILD}" ]] || [[ "$(cd "${BUILD}" && pwd -P)" != "${SCRIPT_DIR}/build" ]]; then
+	redecho "Refusing to clear ${BUILD}; it is not the 'build' directory next to build.sh (${SCRIPT_DIR}). Run this script from the repository directory."
+	exit 4
 fi
+find "${BUILD}" -mindepth 1 ! -path "${BUILD}/tmp" ! -path "${BUILD}/tmp/*" -delete
 
 greenecho " => Build directory is ${BUILD}"
 
@@ -100,7 +111,7 @@ IIQ_VERSION=
 IIQ_PATCH=
 
 # Sanity checking for optional SSB build
-if [[ ! -z $SSB ]]; then
+if [[ ! -z "$SSB" ]]; then
 	if [[ ! -z $(echo "${SSB}" | grep "git\\.") ]]; then
 		greenecho " => SSB looks like a Git repo, checking it out to the 'build/tmp/ssb' folder..."
 		pushd "${BUILD}/tmp"
@@ -121,12 +132,12 @@ if [[ ! -z $SSB ]]; then
 			# New
 			git clone "${SSB}" ssb
 		fi
-		echo ${SSB} > ./repo
-		SSB=${BUILD}/tmp/ssb
+		echo "${SSB}" > ./repo
+		SSB="${BUILD}/tmp/ssb"
 		popd
 		greenecho " => SSB checked out from Git"
 	fi
-	SSB=${SSB%/}
+	SSB="${SSB%/}"
 	if [[ ! -f "${SSB}/build.xml" ]]; then
 		redecho "Option -b directory '${SSB}' does not contain a build.xml"
 		exit 1
@@ -137,64 +148,64 @@ if [[ ! -z $SSB ]]; then
 	        SPTARGET=sandbox
 	fi
 
-	BUILD_PROPERTIES=${SSB}/build.properties
-	if [[ ! -e ${BUILD_PROPERTIES} ]]; then
-		BUILD_PROPERTIES=${SSB}/${SPTARGET}.build.properties
-		if [[ ! -e ${BUILD_PROPERTIES} ]]; then
+	BUILD_PROPERTIES="${SSB}/build.properties"
+	if [[ ! -e "${BUILD_PROPERTIES}" ]]; then
+		BUILD_PROPERTIES="${SSB}/${SPTARGET}.build.properties"
+		if [[ ! -e "${BUILD_PROPERTIES}" ]]; then
 			redecho "No build.properties or ${SPTARGET}.build.properties found"
 			exit 1
 		fi
 	fi
 
 	# This goofy construct is needed to compensate for DOS-formatted files with a \r in them
-	IIQ_VERSION=`grep IIQVersion ${BUILD_PROPERTIES} | head -1 | awk -F "=" '{print $2}' | tr -d '\r'`
-	IIQ_PATCHLEVEL=`grep IIQPatchLevel ${BUILD_PROPERTIES} | awk -F "=" '{print $2}' | tr -d '\r'`
+	IIQ_VERSION=`grep IIQVersion "${BUILD_PROPERTIES}" | head -1 | awk -F "=" '{print $2}' | tr -d '\r'`
+	IIQ_PATCHLEVEL=`grep IIQPatchLevel "${BUILD_PROPERTIES}" | awk -F "=" '{print $2}' | tr -d '\r'`
 
-	if [[ ! -z ${IIQ_PATCHLEVEL} ]]; then
+	if [[ ! -z "${IIQ_PATCHLEVEL}" ]]; then
 		IIQ_PATCH="$IIQ_VERSION$IIQ_PATCHLEVEL"
 		greenecho " => Identified IIQ patch $IIQ_PATCH"
 	fi
 fi
 
-if [[ ! -z ${SSB} ]]; then
+if [[ ! -z "${SSB}" ]]; then
 	greenecho " => SSB configuration -- "
 	echo "   SSB build: ${SSB}/build.xml"
 	echo "   SSB SPTARGET: ${SPTARGET}"
 
 	ANT=`which ant`
-	if [[ -z ${ANT} ]]; then
+	if [[ -z "${ANT}" ]]; then
 		redecho "The 'ant' executable is not available on your path"
 		exit 2
 	fi
 
 	JAVA=`which java`
-	if [[ -z ${JAVA} ]]; then
+	if [[ -z "${JAVA}" ]]; then
 		redecho "The 'java' executable is not available on your path"
 		exit 3
 	fi
 fi
 
-if [[ ! -z $IIQ_ZIP ]]; then
+if [[ ! -z "$IIQ_ZIP" ]]; then
 	IIQ_ZIP=`realname "${IIQ_ZIP}"`
 fi
 
 # Start building
-if [[ ! -z ${SSB} ]]; then
+if [[ ! -z "${SSB}" ]]; then
 	greenecho " => Building SSB..."
 	export SPTARGET
-	pushd ${SSB}
+	pushd "${SSB}"
 	mkdir -p build
-	ant clean war >> ${BUILD}/build.log 2>&1
+	ant clean war >> "${BUILD}/build.log" 2>&1
 	if [[ ! -e build/deploy/identityiq.war ]]; then
 		redecho "The SSB build does not appear to have produced an identityiq.war; please see the build.log for details"
 		exit 9
 	fi
-	cp build/deploy/identityiq.war ${BUILD} 2> /dev/null
+	cp build/deploy/identityiq.war "${BUILD}" 2> /dev/null
 	popd
 else
 	if [[ ! -z "$IIQ_ZIP" ]]; then
 		greenecho " => No SSB; extracting WAR from identityiq ZIP file"
-		pushd ${BUILD}
+		pushd "${BUILD}"
 		unzip -qo "$IIQ_ZIP"
 		popd
 	else
@@ -203,12 +214,31 @@ else
 	fi
 fi
 
-if [[ ! -e ${BUILD}/identityiq.war ]]; then
+if [[ ! -e "${BUILD}/identityiq.war" ]]; then
 	redecho "The build directory does not contain an identityiq.war"
 	exit 9
 fi
 
-cp ${BUILD}/identityiq.war iiq-build/sailpoint/
+cp "${BUILD}/identityiq.war" iiq-build/sailpoint/
+
+# Figure out the version from the identityiq.war
+pushd "${BUILD}"
+unzip -qo "${BUILD}/identityiq.war" WEB-INF/lib/identityiq.jar
+if [[ ! -e "${BUILD}/WEB-INF/lib/identityiq.jar" ]]; then
+	popd
+	redecho "Failed to extract identityiq.jar"
+	exit 9
+fi
+popd
+
+IIQ_VERSION=$(unzip -p "${BUILD}/WEB-INF/lib/identityiq.jar" META-INF/MANIFEST.MF | grep Implementation-Version | awk -F " " '{print $2}' | tr -d '\r')
+
+if [[ -z "${IIQ_VERSION}" ]]; then
+	redecho "Could not determine the IIQ version from WEB-INF/lib/identityiq.jar in the WAR"
+	exit 9
+fi
+
+greenecho " => IIQ version $IIQ_VERSION"
 
 mkdir -p iiq-build/src/patch
 mkdir -p iiq-build/src/efix
@@ -258,6 +288,12 @@ do
 	cp -rf "$object" "iiq-build/src/objects"
 done
 
+IIQ_MAJOR="${IIQ_VERSION%%.*}"
+if [[ "${IIQ_MAJOR}" =~ ^[0-9]+$ ]] && (( IIQ_MAJOR >= 9 )); then
+	export TOMCAT_VERSION=10-jdk21-temurin-noble
+	export JDK_VERSION=21-jdk-noble
+	greenecho " => Using Tomcat 10 for IIQ 9+"
+fi
 greenecho " => Building Docker containers, please wait a minute or two..."
 docker compose --progress quiet build
 
