@@ -1,0 +1,24 @@
+version: 1
+
+# Replaces the vegardit/openldap default password policy, which locks accounts after
+# 3 failures and rejects weak passwords. Demo provisioning needs neither.
+dn: ou=Policies,${LDAP_INIT_ORG_DN}
+ou: Policies
+objectClass: top
+objectClass: organizationalUnit
+
+dn: cn=DefaultPasswordPolicy,ou=Policies,${LDAP_INIT_ORG_DN}
+objectClass: top
+objectClass: device
+objectClass: pwdPolicy
+objectClass: pwdPolicyChecker
+cn: DefaultPasswordPolicy
+pwdAttribute: userPassword
+pwdLockout: FALSE
+pwdMustChange: FALSE
+pwdAllowUserChange: TRUE
+pwdCheckQuality: 0
+pwdMinLength: 0
+pwdMinAge: 0
+pwdMaxAge: 0
+pwdInHistory: 0

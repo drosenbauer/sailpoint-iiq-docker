@@ -12,25 +12,47 @@ services:
       - traefik.enable=false
 
   ldap:
-    image: osixia/openldap:1.5.0
-    ports: 
-      - 1389:389
+    image: vegardit/openldap:${OPENLDAP_VERSION:-2.6.x}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:1389:389"
     environment:
-      - LDAP_DOMAIN=sailpoint.demo
-      - LDAP_ORGANISATION=Sailpoint Demo
-      - LDAP_ADMIN_PASSWORD=spadmin
-    labels: 
+      - LDAP_INIT_ORG_DN=dc=sailpoint,dc=demo
+      - LDAP_INIT_ORG_NAME=Sailpoint Demo
+      - LDAP_INIT_ROOT_USER_DN=cn=admin,dc=sailpoint,dc=demo
+      - LDAP_INIT_ROOT_USER_PW=spadmin
+    volumes:
+      # Replace the image's sample tree, users and password policy with a bare base entry
+      - ./ldap/init_org_tree.ldif:/opt/ldifs/init_org_tree.ldif:ro
+      - ./ldap/init_org_ppolicy.ldif:/opt/ldifs/init_org_ppolicy.ldif:ro
+      - ./ldap/init_org_entries.ldif:/opt/ldifs/init_org_entries.ldif:ro
+    healthcheck:
+      # Port 389 only answers once first-time initialization has finished
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -b '' -s base namingContexts | grep -q 'dc=sailpoint,dc=demo'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    labels:
         - traefik.enable=false
 
   phpldapadmin:
-    image: osixia/phpldapadmin
-    ports: 
-      - 8443:443
+    image: phpldapadmin/phpldapadmin:${PHPLDAPADMIN_VERSION:-2.3.12}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PHPLDAPADMIN_PORT:-8081}:8080"
     environment:
-      - PHPLDAPADMIN_LDAP_HOSTS=ldap
+      - LDAP_HOST=ldap
+      - LDAP_NAME=Sailpoint Demo
+      - LDAP_BASE_DN=dc=sailpoint,dc=demo
+      - LDAP_USERNAME=cn=admin,dc=sailpoint,dc=demo
+      - LDAP_PASSWORD=spadmin
+      # Log in with the full DN, e.g. cn=admin,dc=sailpoint,dc=demo
+      - LDAP_LOGIN_ATTR=DN
+      - LDAP_LOGIN_OBJECTCLASS=simpleSecurityObject,organizationalRole,inetOrgPerson,posixAccount
+    depends_on:
+      - ldap
 
   activemq:
-    image: apache/activemq-artemis:latest-alpine
+    image: apache/artemis:${ARTEMIS_VERSION:-2.57.0}-alpine
     labels:
         - "traefik.enable=true"
         - "traefik.http.routers.activemq.entrypoints=web"
@@ -41,7 +63,7 @@ services:
         - "traefik.http.services.activemq.loadbalancer.sticky.cookie=true"    
 
   db:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: "mcr.microsoft.com/mssql/server:${MSSQL_VERSION:-2022-latest}"
     platform: linux/amd64
     environment:
       - ACCEPT_EULA=Y
@@ -51,7 +73,7 @@ services:
         - traefik.enable=false
 
   db_mysql:
-    image: "mysql:${MYSQL_VERSION:-8.0}"
+    image: "mysql:${MYSQL_VERSION:-8.4}"
     environment:
       - MYSQL_USER=identityiq
       - MYSQL_PASSWORD=identityiq
@@ -73,7 +95,7 @@ services:
       - traefik.enable=false
 
   loadbalancer:
-    image: traefik:3.6.14
+    image: traefik:3.6.25
     command:
       - "--providers.docker=true" 
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
@@ -86,7 +108,7 @@ services:
       - "--entryPoints.web.address=:80"
     ports:
       - "${LISTEN_PORT:-8080}:80"      # The HTTP port
-      - "28080:8080"
+      - "${BIND_ADDRESS:-127.0.0.1}:28080:8080"  # Unauthenticated dashboard
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro" # So that Traefik can listen to the Docker events
     labels:
@@ -155,10 +177,14 @@ services:
       - MYSQL_ROOT_PASSWORD=password
       - INIT=y
     depends_on:
-      - db
-      - db_mysql
-      - mail
-      - ldap
+      db:
+          condition: service_started
+      db_mysql:
+          condition: service_started
+      mail:
+          condition: service_started
+      ldap:
+          condition: service_healthy
     deploy:
       restart_policy:
         condition: none

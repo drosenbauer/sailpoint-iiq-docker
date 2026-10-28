@@ -202,10 +202,13 @@ If you start up a standalone container, or set a `DATABASE_TYPE` of `local`, a M
 
 This Docker Compose file will start up several services:
 
-* db_mysql: MySQL 8.0
-* db: The latest MSSQL developer image
+* db_mysql: MySQL 8.4 by default. Set `MYSQL_VERSION` (for example in a `.env` file) to change it.
+* db: The MSSQL 2022 developer image. Set `MSSQL_VERSION` (for example `2019-latest`) to change it.
+
+Check your IIQ version's supported platforms before picking a database. IIQ 9.0 supports MySQL 8.4 and SQL Server 2022 and 2025. IIQ 8.5 supports MySQL 8.4 and 8.0, and SQL Server 2022 and 2019. The defaults (MySQL 8.4, SQL Server 2022) have also been tested with IIQ 8.4.
 * mail: MailHog
-* ldap: OpenLDAP
+* ldap: OpenLDAP 2.6 (`vegardit/openldap`), base DN `dc=sailpoint,dc=demo`, admin `cn=admin,dc=sailpoint,dc=demo` / `spadmin`. The image's sample users and password policy are replaced by the files in `ldap/`, which give a bare base entry for IIQ's `bootstrap.ldif` to populate.
+* phpldapadmin: phpLDAPadmin 2, at `http://localhost:8081` (log in as `cn=admin,dc=sailpoint,dc=demo`)
 * ssh: An SSH server
 * loadbalancer: The load balancer Traefik
 * iiq: IdentityIQ nodes (which can be replicated ad nauseum)

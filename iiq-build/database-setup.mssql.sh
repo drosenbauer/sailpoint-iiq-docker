@@ -53,7 +53,7 @@ then
 	if [ -z "${SKIP_DEMO_IMPORT}" ]
 	then
 		echo "=> Importing demo LDAP objects"
-		ldapmodify -h ldap -D "cn=admin,dc=sailpoint,dc=demo" -w spadmin -f /bootstrap.ldif
+		ldapmodify -H ldap://ldap -D "cn=admin,dc=sailpoint,dc=demo" -w spadmin -f /bootstrap.ldif
 	fi
 else
 	echo "=> Database already set up, version "$DB_SCHEMA_VERSION" found, starting IIQ directly";

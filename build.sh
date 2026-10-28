@@ -326,7 +326,7 @@ fi
 
 IMAGE=git.identityworksllc.com:5005/idw/idw-sailpoint/sailpoint-docker
 ui_info "This usually takes a minute or two" "full output in build/build.log"
-ui_run "Building Docker images" docker compose --progress plain build || ui_die 10 "Docker build failed; see build/build.log for details"
+ui_run "Building Docker images" docker compose --progress plain build --pull || ui_die 10 "Docker build failed; see build/build.log for details"
 
 if [[ ! -z "${LABEL}" ]]; then
 	docker tag "${IMAGE}:latest" "${IMAGE}:${LABEL}" || ui_die 10 "Failed to tag the image as ${LABEL}"

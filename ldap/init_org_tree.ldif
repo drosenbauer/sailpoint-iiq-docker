@@ -1,0 +1,9 @@
+version: 1
+
+# Replaces the vegardit/openldap default tree. Only the base entry is created here;
+# ou=People, ou=Groups, etc. come from iiq-build/src/bootstrap.ldif, which IIQ imports.
+dn: ${LDAP_INIT_ORG_DN}
+description: ${LDAP_INIT_ORG_NAME}
+objectClass: top
+objectClass: organization
+${LDAP_INIT_ORG_COMPUTED_ATTRS}

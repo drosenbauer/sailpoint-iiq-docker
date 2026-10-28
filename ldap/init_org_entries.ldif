@@ -1,0 +1,10 @@
+version: 1
+
+# Replaces the vegardit/openldap sample users and groups (which use the password 'changeit').
+# The admin account itself is the database root DN (LDAP_INIT_ROOT_USER_DN) and binds with
+# LDAP_INIT_ROOT_USER_PW; this entry exists so tools such as phpLDAPadmin can find it in the tree.
+dn: cn=admin,${LDAP_INIT_ORG_DN}
+objectClass: top
+objectClass: organizationalRole
+cn: admin
+description: LDAP administrator
