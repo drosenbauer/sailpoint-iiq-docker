@@ -1,9 +1,6 @@
 #!/bin/bash
+# Starts the stack with the given number of IIQ nodes (default 1)
 
-if [[ ! -z $1 ]]; then
-	SCALE=$1
-else
-	SCALE=1
-fi
+cd "$(dirname "$0")/.." || exit 1
 
-docker-compose up -d --scale iiq=$SCALE
+docker compose up -d --scale iiq="${1:-1}"

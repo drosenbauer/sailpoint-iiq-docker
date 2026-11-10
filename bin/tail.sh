@@ -1,9 +1,6 @@
 #!/bin/bash
+# Follows container logs; pass service names to limit it, e.g. bin/tail.sh iiq
 
-if [[ -e build/.composefile ]]; then
-	FILE=`cat build/.composefile`
-else
-	FILE=docker-compose.yml
-fi
+cd "$(dirname "$0")/.." || exit 1
 
-docker-compose logs --tail=20 -f "$@"
+docker compose logs --tail=20 -f "$@"

@@ -59,14 +59,33 @@ checkout_ssb() {
 }
 
 build_ssb() {
-	cd "${SSB}" && mkdir -p build && ant clean war
+	local rc
+	pushd "${SSB}"
+	mkdir -p build
+	if [[ -e "${SSB}/build.gradle" ]]; then
+		ui_run "Building SSB with Gradle" ./gradlew
+	else
+		ui_run "Building SSB with Ant" ant clean war
+	fi
+	rc=$?
+	popd
+	return "${rc}"
+}
+
+# Lists files under the SSB's base/ directory that are Git LFS pointers rather
+# than the real IIQ binaries, relative to the SSB directory
+lfs_pointers() {
+	local f
+	[[ -d "${SSB}/base" ]] || return 0
+	find "${SSB}/base" -type f \( -name '*.zip' -o -name '*.jar' \) -size -2k | sort | while IFS= read -r f; do
+		if head -n 1 "$f" | grep -q '^version https://git-lfs'; then
+			printf '%s\n' "${f#"${SSB}"/}"
+		fi
+	done
 }
 
 extract_zip() {
-	cd "${BUILD}" || return 1
-	unzip -qo "$IIQ_ZIP"
-	# Exit code 1 is only a warning
-	[[ "$?" -le 1 ]]
+	zip_extract "${IIQ_ZIP}" "${BUILD}"
 }
 
 while getopts ":b:t:z:w:m:e:p:s:o:l:c:" opt; do
@@ -186,6 +205,7 @@ if [[ ! -z "$SSB" ]]; then
 		ui_run "Checking out SSB from Git" checkout_ssb || ui_die 1 "Could not check out ${SSB}; see build/build.log"
 		SSB="${BUILD}/tmp/ssb"
 	fi
+	SSB="$(unix_path "${SSB}")"
 	SSB="${SSB%/}"
 	if [[ ! -f "${SSB}/build.xml" ]]; then
 		ui_die 1 "Option -b directory '${SSB}' does not contain a build.xml"
@@ -208,26 +228,48 @@ if [[ ! -z "$SSB" ]]; then
 		ui_info "Identified IIQ patch $IIQ_PATCH"
 	fi
 
-	ANT=`which ant`
-	if [[ -z "${ANT}" ]]; then
+	# Binaries this build uses that are still Git LFS pointers will fail later
+	# with an unhelpful "archive is not a ZIP archive", so catch them here
+	POINTERS=$(lfs_pointers)
+	if [[ -n "${POINTERS}" ]]; then
+		NEEDED=$(grep -E "^base/(ga/identityiq-${IIQ_VERSION}\.zip|patch/identityiq-${IIQ_PATCH:-none}\.jar|efix/${IIQ_PATCH:-${IIQ_VERSION}}/)" <<< "${POINTERS}")
+		if [[ -n "${NEEDED}" ]]; then
+			if git lfs version > /dev/null 2>&1; then
+				FIX="Download them with:  git -C $(printf %q "${SSB}") lfs pull"
+			else
+				FIX="Install Git LFS (https://git-lfs.com) and run 'git lfs install', then:  git -C $(printf %q "${SSB}") lfs pull"
+			fi
+			# shellcheck disable=SC2086
+			ui_die 5 "The SSB's IIQ binaries are Git LFS placeholders, not the real files" ${NEEDED} "" "${FIX}"
+		fi
+		ui_warn "$(wc -l <<< "${POINTERS}" | tr -d ' ') unused file(s) under ${SSB##*/}/base are Git LFS placeholders; ignoring"
+	fi
+
+	# Gradle-based SSBs bring their own build tooling via ./gradlew
+	if [[ ! -e "${SSB}/build.gradle" ]] && ! command -v ant > /dev/null 2>&1; then
 		ui_die 2 "The 'ant' executable is not available on your path"
 	fi
 
-	JAVA=`which java`
-	if [[ -z "${JAVA}" ]]; then
+	if ! command -v java > /dev/null 2>&1; then
 		ui_die 3 "The 'java' executable is not available on your path"
 	fi
 fi
 
 if [[ ! -z "$IIQ_ZIP" ]]; then
-	IIQ_ZIP=`realname "${IIQ_ZIP}"`
+	IIQ_ZIP=`realname "$(unix_path "${IIQ_ZIP}")"`
+fi
+
+if [[ ! -z "$IIQ_ZIP" ]] || [[ ! -z "$IIQ_WAR" ]] || [[ ! -z "$SSB" ]]; then
+	if [[ -z "$(zip_tool)" ]]; then
+		ui_die 3 "Can't extract zip files: install unzip (or bsdtar, or Python 3)"
+	fi
 fi
 
 # Start building
 ui_section "Source"
 if [[ ! -z "${SSB}" ]]; then
 	export SPTARGET
-	ui_run "Building SSB" build_ssb
+	build_ssb || ui_die 9 "The SSB build failed; full output is in build/build.log"
 	if [[ ! -e "${SSB}/build/deploy/identityiq.war" ]]; then
 		ui_die 9 "The SSB build does not appear to have produced an identityiq.war; please see build/build.log for details"
 	fi
@@ -248,15 +290,12 @@ fi
 cp "${BUILD}/identityiq.war" iiq-build/sailpoint/
 
 # Figure out the version from the identityiq.war
-pushd "${BUILD}"
-unzip -qo "${BUILD}/identityiq.war" WEB-INF/lib/identityiq.jar
+zip_extract "${BUILD}/identityiq.war" "${BUILD}" WEB-INF/lib/identityiq.jar
 if [[ ! -e "${BUILD}/WEB-INF/lib/identityiq.jar" ]]; then
-	popd
 	ui_die 9 "Failed to extract identityiq.jar"
 fi
-popd
 
-IIQ_VERSION=$(unzip -p "${BUILD}/WEB-INF/lib/identityiq.jar" META-INF/MANIFEST.MF | grep Implementation-Version | awk -F " " '{print $2}' | tr -d '\r')
+IIQ_VERSION=$(zip_cat "${BUILD}/WEB-INF/lib/identityiq.jar" META-INF/MANIFEST.MF | grep Implementation-Version | awk -F " " '{print $2}' | tr -d '\r')
 
 if [[ -z "${IIQ_VERSION}" ]]; then
 	ui_die 9 "Could not determine the IIQ version from WEB-INF/lib/identityiq.jar in the WAR"

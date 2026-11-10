@@ -1,0 +1,7 @@
+# Scripts and config here run under bash or inside Linux containers, so keep LF
+# line endings even on Windows, where Git would otherwise check out CRLF
+* text=auto eol=lf
+
+*.jar binary
+*.war binary
+*.zip binary

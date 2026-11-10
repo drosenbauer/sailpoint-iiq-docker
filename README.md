@@ -20,17 +20,17 @@
 
 # Supported versions
 
-As of the July 2023 changes, only versions higher than IIQ 8.0 are supported, as the included database has been updated to the latest MySQL.
+The following IIQ versions are officially supported: IIQ 8.3, 8.4, 8.5, and 9.0.
 
-Previous versions of the SailPoint IIQ Docker builder support IIQ 7.2, IIQ 7.3, IIQ 8.0, and IIQ 8.1. You can check out previous Git commits if you want to try building those.
+Previous versions of the SailPoint IIQ Docker builder support IIQ 7.2, 7.3, 8.0, 8.1, and 8.2. You can check out previous Git commits if you want to try building those.
 
 # Quick Start
 
-There are several of ways to start your Docker environment:
+There are several ways to start your Docker environment:
 
 * [A single-container build](#single-container)
 * [A pre-built full stack](#compose-with-a-pre-built-image)
-* **[Building your own full stack](#compose-with-build-recommended) (recommended)**
+* **[Building your own full stack](#compose-with-build-recommended) (strongly recommended)**
 * [Swarm mode](#swarm)
 
 ## Single container
@@ -68,29 +68,29 @@ You will also see the following sporadic errors and warnings, especially during 
 
 ## Compose with a pre-built image
 
-**This option is for Identity Works internal use only. Sorry. We aren't allowed to distribute IIQ binaries.**
+**This option is for Instrumental ID internal use only. Sorry. We aren't allowed to distribute IIQ binaries. You can always push images to your own internal container storage, though.**
 
-On a Linux or Linux-like infrastructure:
+On Linux, macOS, or Windows (in Git Bash):
 
 * Install Docker and Docker Compose (or Docker for Mac/Windows)
-* Authenticate to the internal IDW Docker registry
-* Grab the docker-compose.yml file from [this snippet](https://git.identityworksllc.com/idw/idw-sailpoint/sailpoint-docker/snippets/16) and save it locally
-* Go to that directory and run `docker-compose up -d`
+* Authenticate to the internal IID Docker registry in Gitlab
+* Grab the docker-compose.yml file from [this snippet](https://git.instrumentalidentity.com/idw/idw-sailpoint/sailpoint-docker/snippets/16) and save it locally
+* Go to that directory and run `docker compose up -d`
 
 The `latest` tag in the registry refers to 7.3p3, so that will be the default version started.
 
 ## Docker Compose with build (recommended)
 
-On a Linux or Linux-like infrastructure:
+On Linux, macOS, or Windows (in Git Bash):
 
 1.  Install Docker and Docker Compose.
 2.  Obtain an IdentityIQ zip file from [Compass Downloads](https://community.sailpoint.com/t5/IdentityIQ-Downloads/ct-p/IIQ_downloads).
 3.  `git clone <this repo>`
 4.  `cd sailpoint-docker`
 5.  `./build.sh -z /path/to/identityiq-8.3.zip -p /path/to/identityiq-8.3p3.jar` (for example)
-6.  Start up a standalone stack with `docker-compose up -d`.
+6.  Start up a standalone stack with `docker compose up -d`.
 
-The default stack name is `iiqstack`, so your containers will be named things like `iiqstack_db`.
+The default stack name is `iiqstack`, so your containers will be named things like `iiqstack-db-1`.
 
 On startup, IIQ will be available on port 8080, e.g., `http://localhost:8080/identityiq`. 
 
@@ -102,7 +102,7 @@ A container called `iiq-init` will run on startup in the default configuration. 
 
 ### Scaling
 
-To scale IIQ, use a docker-compose command like `docker-compose up -d --scale iiq=3`, which will start 3 IIQ nodes. The IIQ instances will name their Server objects `iiq1`, `iiq2`, etc, but this does not necessarily correspond to the replica labeling (`iiq_2`) in Docker.
+To scale IIQ, use a docker compose command like `docker compose up -d --scale iiq=3`, which will start 3 IIQ nodes. The IIQ instances will name their Server objects `iiq1`, `iiq2`, etc, but this does not necessarily correspond to the replica labeling (`iiqstack-iiq-2`) in Docker.
 
 You can also scale at runtime using the same command after startup, which will add or remove nodes as needed. Note that the nodes added and removed are decided by Docker, not by their startup order or counter ID. This means that on scaling down, you may lose `iiq1` but keep `iiq2`.
 
@@ -145,7 +145,7 @@ If you specify an SSB build, you do not need to specify any patches or hotfixes,
 
 ## Manually 
 
-If you want to do it yourself or use a custom build, you can copy a supported `identityiq.war` to `iiq-build/sailpoint` manually and then invoke `docker-compose build`. This is ultimately what the build script is doing behind the scenes.
+If you want to do it yourself or use a custom build, you can copy a supported `identityiq.war` to `iiq-build/sailpoint` manually and then invoke `docker compose build`. This is ultimately what the build script is doing behind the scenes.
 
 There are other folders in `iiq-build/src` that you can add artifacts to as needed: 
 
@@ -158,7 +158,7 @@ There are other folders in `iiq-build/src` that you can add artifacts to as need
 
 This is a common question from people who are new to Docker and containerization. As a best practice, Dockerized applications are not supposed to write their logs to files. Container engines like Docker have their own log management infrastructure that captures any lines written to stdout and then, ideally, ships them off to some sort of a log aggregator, like Splunk or ELK. IIQ embedded in Docker is not different in this regard.
 
-Since this is just a POC, we obviously don't have any kind of logging infrastructure in place, so you will need to view the Docker log output directly. From the root folder of this project (where `docker-compose.yml` is located), run: `docker-compose logs -f iiq`.
+Since this is just a POC, we obviously don't have any kind of logging infrastructure in place, so you will need to view the Docker log output directly. From the root folder of this project (where `docker-compose.yml` is located), run: `docker compose logs -f iiq`.
 
 # Additional scripts
 
@@ -168,13 +168,13 @@ TODO document these
 
 ## Entering the shell
 
-You can enter the shell of any of the running containers using the provided `enter-shell.sh` script. 
+You can enter the shell of any of the running containers using the provided `bin/enter-shell.sh` script.
 
-By default, with no parameters, you will enter the primary iiq-master container. You can specify a WHICH environment variable to enter another. For example: `WHICH=iiq-secondary ./enter-shell.sh`
+By default, you will enter the first IIQ container. Set the WHICH environment variable to enter another service, for example: `WHICH=ldap bin/enter-shell.sh`
 
 ## Stopping
 
-To stop the stack, run `docker-compose down`.
+To stop the stack, run `docker compose down`.
 
 # SSB
 
@@ -230,7 +230,7 @@ SERI is SailPoint's IIQ sales demo package available to partners.
 
 If `WEB-INF/config/seri` is detected by the startup script, the SERI init objects will be imported automatically. 
 
-Additionally, you will be able to use the `seri.sh` script to more easily push in any SERI component after IIQ is started. If the component is in the folder `config/seri/catalog/UseCase-XYZ`, you would specify `UseCase-XYZ` as the parameter to `seri.sh`. The `setup.xml` file in that folder will be imported. If the folder you specify begins with *Plugin*, the contents will be imported as one or more plugins instead.
+Additionally, you will be able to use the `bin/seri.sh` script to more easily push in any SERI component after IIQ is started. If the component is in the folder `config/seri/catalog/UseCase-XYZ`, you would specify `UseCase-XYZ` as the parameter to `seri.sh`. The `setup.xml` file in that folder will be imported. If the folder you specify begins with *Plugin*, the contents will be imported as one or more plugins instead.
 
 # Accelerator Pack
 

@@ -1,33 +1,27 @@
 #!/bin/bash
+# Installs a SERI use case or plugin from config/seri/catalog: bin/seri.sh UseCase-XYZ
 
+cd "$(dirname "$0")/.." || exit 1
+source bin/include/utils.sh
 
-pushd () {
-    command pushd "$@" > /dev/null
-}
-
-popd () {
-    command popd "$@" > /dev/null
-}
-
-greenecho() {
-        text=$1
-        echo -e "\033[1;32m${text}\033[0m"
-}
-
-redecho() {
-        text=$1
-        echo -e "\033[1;31m${text}\033[0m"
-}
+# Git Bash: don't rewrite the Linux paths below into Windows paths
+export MSYS_NO_PATHCONV=1
 
 console() {
 	command=$1
 	greenecho "Invoking console command $command"
-	docker-compose -p iiq exec "iiq-master" /bin/bash -c "echo '$command' | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console" | grep -v "deprecated" | grep -v "MySQL" | grep -v "sailpoint.persistence.ExtendedAttributeUtil"
+	# -T: no terminal needed, since input is piped in and output is filtered
+	docker compose exec -T iiq /bin/bash -c "echo '$command' | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console" | grep -v "deprecated" | grep -v "MySQL" | grep -v "sailpoint.persistence.ExtendedAttributeUtil"
 }
 
 SERI_ITEM=$1
 
-if [[ -z `echo $SERI_ITEM | grep Plugin` ]]; then
+if [[ -z "${SERI_ITEM}" ]]; then
+	redecho "Usage: bin/seri.sh <catalog folder name>"
+	exit 1
+fi
+
+if [[ "${SERI_ITEM}" != *Plugin* ]]; then
 	# XML import
 	greenecho "Installing SERI utility or use-case $SERI_ITEM"
 	console "import seri/catalog/${SERI_ITEM}/setup.xml"

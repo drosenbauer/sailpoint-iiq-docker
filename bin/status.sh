@@ -1,11 +1,5 @@
 #!/bin/bash
 
-if [[ -e build/.composefile ]]; then
-        FILE=`cat build/.composefile`
-else
-        FILE=docker-compose.yml
-fi
+cd "$(dirname "$0")/.." || exit 1
 
-set -x
-
-docker-compose ps
+docker compose ps

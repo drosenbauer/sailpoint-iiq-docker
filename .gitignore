@@ -8,4 +8,10 @@ iiq-build/src/efix/
 iiq-build/src/objects/
 build/
 identityiq*.zip
-.idea
+
+# IDE stuff
+.settings/
+.classpath
+.idea/
+.vscode/
+.claude/
