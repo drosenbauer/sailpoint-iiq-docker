@@ -71,6 +71,9 @@ configureMssqlProperties() {
 
 	sed -ri -e "s/^dataSourceAccessHistory.url/#dataSourceAccessHistory.url/" ${PROPS}
 	sed -ri -e "s/^dataSourceAccessHistory.driverClassName/#dataSourceAccessHistory.driverClassName/" ${PROPS}
+
+	# An SSB built for Oracle validates connections with "select 1 from dual", which SQL Server rejects
+	sed -ri -e "s/^(dataSource|pluginsDataSource|dataSourceAccessHistory)\.validationQuery/#&/" ${PROPS}
 	
 	sed -ri -e "s/^dataSource.username\=.*/dataSource.username=${MSSQL_USER}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
 	sed -ri -e "s/^dataSource.password\=.*/dataSource.password=${MSSQL_PASS}/" /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
@@ -82,6 +85,9 @@ configureMssqlProperties() {
 	echo """
 dataSource.url=jdbc:sqlserver://${MSSQL_HOST}:1433;databaseName=identityiq;encrypt=true;trustServerCertificate=true
 dataSource.driverClassName=com.microsoft.sqlserver.jdbc.SQLServerDriver
+dataSource.validationQuery=SELECT 1
+pluginsDataSource.validationQuery=SELECT 1
+dataSourceAccessHistory.validationQuery=SELECT 1
 sessionFactory.hibernateProperties.hibernate.dialect=sailpoint.persistence.SQLServerPagingDialect
 scheduler.quartzProperties.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.MSSQLDelegate
 scheduler.quartzProperties.org.quartz.jobStore.selectWithLockSQL=SELECT * FROM {0}LOCKS UPDLOCK WHERE LOCK_NAME = ?
@@ -165,6 +171,14 @@ do
 done
 
 popd
+
+# An SSB can point IIQ at a keystore (keyStore.file, keyStore.passwordFile) that
+# only exists on the customer's servers. Comment those settings out so IIQ uses
+# its default key; values the SSB encrypted with the customer's key won't decrypt.
+if grep -qE '^[[:space:]]*keyStore\.' /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties; then
+	echo "=> Commenting out the custom keyStore settings in iiq.properties"
+	sed -ri -e 's/^[[:space:]]*keyStore\./#&/' /opt/tomcat/webapps/identityiq/WEB-INF/classes/iiq.properties
+fi
 
 if [[ -z "${IIQ_VERSION}" ]]; then
 	export IIQ_VERSION=$(unzip -p /opt/tomcat/webapps/identityiq/WEB-INF/lib/identityiq.jar META-INF/MANIFEST.MF | grep Implementation-Version | awk -F "[ p]" '{print $3}')

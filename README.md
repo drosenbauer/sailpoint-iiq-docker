@@ -180,7 +180,16 @@ To stop the stack, run `docker compose down`.
 
 If you use SailPoint's "Standard Services Build" (SSB) suite, the build script can automatically run the build for you.
 
-If you use the `-b` flag to the startup script, your SSB project will be built using `ant clean war`. The WAR file will be provided to the container and startup will proceed normally. Since the schema is regenerated before import, no special action is needed for extended attributes or patches.
+If you use the `-b` flag to the startup script, your SSB project will be built using `./gradlew` (for Gradle-based builds) or `ant clean war`. The WAR file will be provided to the container and startup will proceed normally. Since the schema is regenerated before import, no special action is needed for extended attributes or patches.
+
+## Database and keystore settings
+
+The SSB target you pick with `-t` usually points at that environment's real database and may use a custom keystore. On startup, the container replaces those settings in `iiq.properties`:
+
+* The database URL, driver, credentials, dialect and connection validation query are replaced with ones for the stack's database. The SQL Server setup handles SSBs configured for any database. The MySQL setup only adjusts SSBs that were already configured for MySQL.
+* Any `keyStore.*` settings are commented out, so IIQ uses its default encryption key instead of a keystore file that only exists on the real servers.
+
+Anything in your configuration that's encrypted with an IIQ instance keystore, such as application or service account passwords in its XML, can't be decrypted in the container. (Keystores are, of course, not supposed to be in source control or on lab servers.) Re-enter those values in IIQ, or use a (fake) SPTARGET whose tokenized values are unencrypted.
 
 ## Git integration
 
