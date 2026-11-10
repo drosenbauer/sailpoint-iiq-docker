@@ -222,6 +222,32 @@ ui_log_excerpt() {
     fi
 }
 
+# ui_live_tail <log> <width>
+# The last 8 non-blank lines of the running step's output, cut to <width>. Only
+# reads the end of the log, and drops anything up to the step's "=== " header.
+ui_live_tail() {
+    # tr: progress bars redraw with \r, so treat each redraw as its own line
+    tail -n 40 "$1" | tr '\r' '\n' | awk -v w="$2" '
+        /^=== / { n = 0; next }
+        {
+            gsub(/\033\[[0-9;?]*[A-Za-z]/, "")  # strip color codes
+            gsub(/\t/, "    ")
+        }
+        NF { buf[n % 8] = substr($0, 1, w); n++ }
+        END { for (i = (n > 8 ? n - 8 : 0); i < n; i++) print buf[i % 8] }
+    '
+}
+
+# Number of output lines currently drawn under ui_run's spinner
+UI_LIVE_LINES=0
+
+# Clears ui_run's spinner line and the output lines under it
+ui_live_clear() {
+    (( UI_LIVE_LINES > 0 )) && printf '\033[%dA' "${UI_LIVE_LINES}"
+    printf '\r\033[J'
+    UI_LIVE_LINES=0
+}
+
 # ui_run <label> <command...>
 # Runs the command with its output appended to $UI_LOG, showing a spinner while
 # it works. Returns the command's exit code; on failure, shows what went wrong.
@@ -251,19 +277,54 @@ ui_run() {
         # (TERM): kill the job and everything it started, clear the spinner line
         # (\r = line start, \033[K = erase line), show the cursor (\033[?25h),
         # and exit 130, the conventional "interrupted" code
-        trap "kill_tree ${pid}; printf '\r\033[K\033[?25h\n'; exit 130" INT TERM
+        trap "kill_tree ${pid}; ui_live_clear; printf '\033[?25h\n'; exit 130" INT TERM
         printf '\033[?25l'  # hide the cursor
+
+        local tick=0 elapsed out="" line screen
+        # Output lines are cut to fit, since a wrapped line would throw off the redraw
+        local width=$(( $(tput cols 2> /dev/null || echo 80) - 7 ))
+        (( width < 20 )) && width=20
+        UI_LIVE_LINES=0
+
         # kill -0 sends no signal; it just tests whether the process still exists
         while kill -0 "${pid}" 2>/dev/null; do
-            printf '\r\033[K%s  %s  %s  %s%s%s' "${UI_BAR}" "${C_CYAN}${UI_FRAMES[frame]}${C_RESET}" "${label}" "${C_DIM}" "$(ui_elapsed $(( SECONDS - start )))" "${C_RESET}"
+            # Re-read the output about 3 times a second; forks are slow in Git Bash
+            if (( tick % 4 == 0 )) && [[ "${log}" != "/dev/null" ]]; then
+                out=$(ui_live_tail "${log}" "${width}")
+            fi
+            elapsed=$(( SECONDS - start ))
+            if (( elapsed >= 60 )); then
+                printf -v elapsed '%dm %02ds' $(( elapsed / 60 )) $(( elapsed % 60 ))
+            else
+                elapsed="${elapsed}s"
+            fi
+
+            # Build the whole frame first, then print it at once to avoid flicker:
+            # \033[nA moves up n lines to the spinner line, \033[K clears the rest
+            # of each line, and \033[J clears anything left below the last line
+            screen=$'\r'
+            (( UI_LIVE_LINES > 0 )) && screen+=$'\033['"${UI_LIVE_LINES}A"
+            screen+="${UI_BAR}  ${C_CYAN}${UI_FRAMES[frame]}${C_RESET}  ${label}  ${C_DIM}${elapsed}${C_RESET}"$'\033[K'
+            UI_LIVE_LINES=0
+            if [[ -n "${out}" ]]; then
+                while IFS= read -r line; do
+                    screen+=$'\n'"${UI_BAR}     ${C_DIM}${line}${C_RESET}"$'\033[K'
+                    UI_LIVE_LINES=$(( UI_LIVE_LINES + 1 ))
+                done <<< "${out}"
+            fi
+            screen+=$'\033[J'
+            printf '%s' "${screen}"
+
             frame=$(( (frame + 1) % ${#UI_FRAMES[@]} ))
+            tick=$(( tick + 1 ))
             sleep 0.08
         done
         # wait collects the finished job's exit code
         wait "${pid}"
         rc=$?
         trap - INT TERM  # restore normal Ctrl-C handling
-        printf '\r\033[K\033[?25h'
+        ui_live_clear
+        printf '\033[?25h'
     else
         # Not a terminal (piped, CI): no spinner, run in the foreground
         "$@" >> "${log}" 2>&1 < /dev/null
