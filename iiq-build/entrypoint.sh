@@ -237,11 +237,25 @@ cp /opt/iiq/lib/*.jar /opt/tomcat/webapps/identityiq/WEB-INF/lib
 
 if [[ ! -z "${INIT}" ]] || [[ ! -z "${INIT_LOCAL}" ]]
 then
+	# The setup scripts create this file when they create a new IIQ schema
+	rm -f /tmp/iiq-new-database
+
 	if [[ "${DATABASE_TYPE}" == "mysql" ]] || [[ -z "${DATABASE_TYPE}" ]]
-	then	
+	then
 		/database-setup.mysql.sh
-	else		
+		SSB_DB=mysql
+	else
 		/database-setup.mssql.sh
+		SSB_DB=mssql
+	fi
+
+	# Custom tables from the SSB's db folder, converted for this database. Only
+	# on a new database, since the scripts' inserts aren't safe to repeat.
+	# The WAR's own iiq.properties still has the SSB's JDBC URL, which says what
+	# database a script is for when its syntax doesn't.
+	if [[ -e /tmp/iiq-new-database ]] && [[ -d /opt/iiq/db ]]; then
+		SSB_URL=$(unzip -p /opt/iiq/identityiq.war WEB-INF/classes/iiq.properties | tr -d '\r' | grep -E '^[[:space:]]*dataSource\.url[[:space:]]*=' | tail -1 | cut -d= -f2-)
+		python3 /ssb-db-scripts.py --db "${SSB_DB}" --source-url "${SSB_URL}" /opt/iiq/db
 	fi
 
 	if [ -z "${SKIP_DEMO_IMPORT}" ]

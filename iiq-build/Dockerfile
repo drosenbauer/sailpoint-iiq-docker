@@ -75,7 +75,7 @@ RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get update && \
-    apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat-traditional curl supervisor nano less ldap-utils apt-transport-https gnupg ca-certificates && \
+    apt-get install --no-install-recommends -y apt-utils wget unzip tar mysql-client netcat-traditional curl supervisor nano less ldap-utils apt-transport-https gnupg ca-certificates python3 && \
     (apt-get install --no-install-recommends -y libaio1t64 || apt-get install --no-install-recommends -y libaio1) && \
     . /etc/os-release && \
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
@@ -94,6 +94,7 @@ COPY --from=tomcat /opt /opt
 COPY --from=tomcat *.sh /
 COPY --from=tomcat *.ldif /
 COPY my.cnf /etc/mysql
+COPY ssb-db-scripts.py /
 
 ENV CATALINA_HOME=/opt/tomcat
 ENV CATALINA_BASE=/opt/tomcat

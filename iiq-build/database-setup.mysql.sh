@@ -11,6 +11,7 @@ export DB_SCHEMA_VERSION=$(mysql -s -N -h${MYSQL_HOST} -uroot -p${MYSQL_ROOT_PAS
 if [ -z "$DB_SCHEMA_VERSION" ]
 then
 	echo "=> No schema present, creating IIQ schema in DB" 
+	touch /tmp/iiq-new-database
 	echo "" | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq schema
 
 	echo "=> Installing the plugin database"

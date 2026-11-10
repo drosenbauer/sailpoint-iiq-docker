@@ -308,20 +308,23 @@ mkdir -p iiq-build/src/efix
 mkdir -p iiq-build/src/plugins
 mkdir -p iiq-build/src/certs
 mkdir -p iiq-build/src/objects
+mkdir -p iiq-build/src/db
 
 rm -f iiq-build/src/plugins/*.zip
 rm -f iiq-build/src/patch/*.jar
 rm -f iiq-build/src/efix/*.zip
 rm -f iiq-build/src/efix/*.jar
 rm -rf iiq-build/src/objects/*
+rm -rf iiq-build/src/db/*
 
 touch iiq-build/src/efix/.keep
 touch iiq-build/src/patch/.keep
 touch iiq-build/src/plugins/.keep
 touch iiq-build/src/certs/.keep
 touch iiq-build/src/objects/.keep
+touch iiq-build/src/db/.keep
 
-if [[ ${#PATCHES[@]} -gt 0 ]] || [[ ${#HOTFIXES[@]} -gt 0 ]] || [[ ${#PLUGINS[@]} -gt 0 ]] || [[ ${#TRUSTEDCERTS[@]} -gt 0 ]] || [[ ${#OBJECTS[@]} -gt 0 ]]; then
+if [[ ${#PATCHES[@]} -gt 0 ]] || [[ ${#HOTFIXES[@]} -gt 0 ]] || [[ ${#PLUGINS[@]} -gt 0 ]] || [[ ${#TRUSTEDCERTS[@]} -gt 0 ]] || [[ ${#OBJECTS[@]} -gt 0 ]] || [[ -d "${SSB}/db" ]]; then
 	ui_section "Staging"
 fi
 
@@ -354,6 +357,13 @@ do
 	cp -rf "$object" "iiq-build/src/objects"
 	ui_ok "Objects" "$(basename "$object")"
 done
+
+# The SSB's custom database scripts; the container converts them for its
+# database and runs them when it creates a new one
+if [[ -n "${SSB}" ]] && [[ -d "${SSB}/db" ]]; then
+	cp -R "${SSB}/db/." iiq-build/src/db/
+	ui_ok "SSB database scripts" "$(find iiq-build/src/db -type f \( -name '*.sql' -o -name '*.oracle' -o -name '*.sqlserver' -o -name '*.mssql' -o -name '*.mysql' \) | wc -l | tr -d ' ') file(s) from db/"
+fi
 
 ui_section "Docker"
 IIQ_MAJOR="${IIQ_VERSION%%.*}"

@@ -16,6 +16,7 @@ export DB_SCHEMA_VERSION=$(sqlcmd -C -N o -U ${MSSQL_SA_USER} -P ${MSSQL_SA_PASS
 if [[ -z "$DB_SCHEMA_VERSION" ]]
 then
 	echo "=> No schema present, creating IIQ schema in MSSQL DB" 
+	touch /tmp/iiq-new-database
 	echo "" | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq schema
 
 	# create database schema

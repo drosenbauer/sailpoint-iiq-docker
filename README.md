@@ -191,6 +191,18 @@ The SSB target you pick with `-t` usually points at that environment's real data
 
 Anything in your configuration that's encrypted with an IIQ instance keystore, such as application or service account passwords in its XML, can't be decrypted in the container. (Keystores are, of course, not supposed to be in source control or on lab servers.) Re-enter those values in IIQ, or use a (fake) SPTARGET whose tokenized values are unencrypted.
 
+## Custom database scripts
+
+If the SSB has a `db` folder, the build script copies it into the image. When `iiq-init` creates a new IIQ database, it runs those scripts after IIQ's own schema, converting them for the stack's database (SQL Server or MySQL). It doesn't run them again against an existing database, since the scripts' inserts aren't safe to repeat. The work is done by `iiq-build/ssb-db-scripts.py`, which you can also run by hand with `--dry-run` to see the run order and converted SQL.
+
+* **Which files:** `.sql` files and files named for a database (`.oracle`, `.postgresql`, `.sqlserver` or `.mssql`, `.mysql`). If a folder has several versions of the same script, the one for the stack's database wins, then the Oracle one. For a `.sql` file, the source database is worked out from its syntax, or failing that from the JDBC URL in the SSB target's `iiq.properties`.
+* **Schema:** custom tables go in the plugin schema (`identityiqPlugin`), so that's where scripts run. The exception is a script that creates, alters or drops something on IIQ's own `spt_` tables, or on an object it names in the `identityiq` schema, such as extended attribute columns and indexes. That script runs in `identityiq`. Merely referring to IIQ's tables doesn't count: a script that grants on or selects from `identityiq.spt_identity` still runs in the plugin schema.
+* **Order:** a script that uses a table another script creates runs after it, so `Users - Changes.sql` runs after `Users.sql` even though it sorts first. Otherwise, scripts run alphabetically.
+* **Conversion:** covers what SSB scripts typically do: tables, column types and defaults, indexes, inserts, renames, synonyms (views in MySQL), sequences (dropped in MySQL), identity and virtual columns. Procedural code (PL/SQL, T-SQL, PL/pgSQL) is skipped with a message.
+* **Failures:** each statement runs on its own and a failure doesn't stop the rest. Scripts that alter or rename tables for an older database will fail harmlessly on a new one, as will extended attribute columns that IIQ already created from the SSB's Hibernate mappings; check the `iiq-init` log for anything else.
+
+The MySQL container runs with `lower_case_table_names=1`, so table names are case-insensitive, as they are in Oracle and SQL Server.
+
 ## Git integration
 
 If the value passed to `-b` looks like a git repository, the whole SSB build will be pulled from Git before build.

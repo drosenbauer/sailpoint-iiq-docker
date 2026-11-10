@@ -74,6 +74,9 @@ services:
 
   db_mysql:
     image: "mysql:${MYSQL_VERSION:-8.4}"
+    # Case-insensitive table names, as in Oracle and SQL Server. SSB scripts and
+    # code often mix the case of a table's name.
+    command: --lower-case-table-names=1
     environment:
       - MYSQL_USER=identityiq
       - MYSQL_PASSWORD=identityiq
