@@ -203,6 +203,12 @@ If the SSB has a `db` folder, the build script copies it into the image. When `i
 
 The MySQL container runs with `lower_case_table_names=1`, so table names are case-insensitive, as they are in Oracle and SQL Server.
 
+## Description columns and failed imports
+
+Many SSBs widen the `description` column on `spt_configuration`, `spt_custom` and `spt_rule`, since Oracle allows it, and then ship objects with descriptions over IIQ's stock 1024 characters. On every `iiq-init` run, before any import, the container widens those three columns (to `nvarchar(max)` on SQL Server, `mediumtext` on MySQL) if they haven't been already. This also repairs a database created before this step existed.
+
+If any `iiq console` command during `iiq-init` reports an exception, such as an object that fails to import, the container prints the error and the last objects it processed, then exits non-zero. The `iiq` containers wait for `iiq-init` to complete successfully, so the stack won't start with a partial import. Look at `docker logs` for the `iiq-init` container to see what failed.
+
 ## Git integration
 
 If the value passed to `-b` looks like a git repository, the whole SSB build will be pulled from Git before build.

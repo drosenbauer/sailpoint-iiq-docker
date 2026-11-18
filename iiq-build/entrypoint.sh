@@ -9,7 +9,10 @@
 #   - If the database is not initialized, initializes and patches it
 #     - NOTE: This doesn't work for Oracle. You need to pre-initialize the Oracle DB.
 #   - Installs the identityiq DB schema objects
+#   - If the database already existed, stops when its version doesn't match this IIQ build
+#   - Widens the description column on spt_configuration, spt_custom and spt_rule
 #   - If there are no objects in IIQ, imports init.xml and init-lcm.xml
+#     - NOTE: An import that reports an error exits non-zero, so the stack won't start.
 #   - If there are any object XMLs in /opt/iiq/objects, imports them
 #   - If there are any objects installed, just imports sp.init-custom.xml
 #   - Installs any plugins in /opt/iiq/plugins
@@ -18,7 +21,88 @@
 iiq() {
 	COMMAND=$1
 	echo "Executing iiq console command '$COMMAND'"
-	echo $COMMAND | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console
+	IIQ_OUTPUT=$(mktemp)
+	echo $COMMAND | /opt/tomcat/webapps/identityiq/WEB-INF/bin/iiq console 2>&1 | tee "${IIQ_OUTPUT}"
+
+	# The console exits 0 even when an import fails. It prints the exception at the
+	# start of a line (optionally after the "> " prompt), which log4j and stack trace
+	# lines never do, so match on that and stop the container.
+	if grep -qE '^(> )*[A-Za-z_][A-Za-z0-9_.$]*(Exception|Error)\b' "${IIQ_OUTPUT}"; then
+		echo "=> FAILED: iiq console command '$COMMAND' reported an error:" >&2
+		grep -E '^(> )*[A-Za-z_][A-Za-z0-9_.$]*(Exception|Error)\b' "${IIQ_OUTPUT}" >&2
+		echo "=> Last objects processed before the failure:" >&2
+		grep -E '^(> )*(Including File|[A-Za-z]+:)' "${IIQ_OUTPUT}" | tail -3 >&2
+		rm -f "${IIQ_OUTPUT}"
+		exit 1
+	fi
+	rm -f "${IIQ_OUTPUT}"
+}
+
+# SSBs often widen the description column on a few tables (Oracle allows it), and
+# their objects won't import into the stock 1024-character column. Widen it here.
+# Checks the current type first, so it's a no-op once done and also fixes databases
+# created before this existed.
+widenDescriptionColumns() {
+	DB=$1
+	for TABLE in spt_configuration spt_custom spt_rule; do
+		if [[ "${DB}" == "mssql" ]]; then
+			sqlcmd -C -N o -b -U "${MSSQL_SA_USER:-SA}" -P "${MSSQL_SA_PASSWORD}" -S "${MSSQL_HOST}" -d identityiq -Q \
+				"IF (SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='identityiq' AND TABLE_NAME='${TABLE}' AND COLUMN_NAME='description') <> -1 BEGIN PRINT '=> Widening identityiq.${TABLE}.description'; ALTER TABLE identityiq.${TABLE} ALTER COLUMN description nvarchar(max) NULL END" \
+				|| { echo "=> FAILED: could not widen ${TABLE}.description" >&2; exit 1; }
+		else
+			TYPE=$(mysql -s -N -h"${MYSQL_HOST}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "select data_type from information_schema.columns where table_schema='identityiq' and table_name='${TABLE}' and column_name='description'") \
+				|| { echo "=> FAILED: could not read ${TABLE}.description" >&2; exit 1; }
+			if [[ "${TYPE}" == "varchar" ]]; then
+				echo "=> Widening identityiq.${TABLE}.description"
+				mysql -h"${MYSQL_HOST}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "alter table identityiq.${TABLE} modify description mediumtext null" \
+					|| { echo "=> FAILED: could not widen ${TABLE}.description" >&2; exit 1; }
+			fi
+		fi
+	done
+}
+
+# The setup scripts skip an existing database, so a database left from another IIQ
+# version would only fail later, when Tomcat starts. Compare it with the versions
+# this build expects (constants in identityiq.jar) and stop the init container.
+checkDatabaseVersion() {
+	DB=$1
+	CONSTANTS=$(javap -constants -cp /opt/tomcat/webapps/identityiq/WEB-INF/lib/identityiq.jar sailpoint.object.DatabaseVersion 2>/dev/null)
+	EXPECTED_SCHEMA=$(echo "${CONSTANTS}" | sed -n 's/.* SCHEMA_VERSION = "\(.*\)";/\1/p')
+	EXPECTED_SYSTEM=$(echo "${CONSTANTS}" | sed -n 's/.* SYSTEM_VERSION = "\(.*\)";/\1/p')
+	if [[ -z "${EXPECTED_SCHEMA}" ]] || [[ -z "${EXPECTED_SYSTEM}" ]]; then
+		echo "=> WARNING: could not read the expected database version from identityiq.jar; skipping the version check" >&2
+		return
+	fi
+
+	QUERY="select schema_version, system_version from identityiq.spt_database_version where name='main'"
+	# stderr is kept apart, since mysql warns there about the password on the command line
+	QUERY_ERR=$(mktemp)
+	if [[ "${DB}" == "mssql" ]]; then
+		# -h -1 drops the header, -W trims padding, nocount drops "(1 rows affected)"
+		FOUND=$(sqlcmd -C -N o -b -h -1 -W -s ' ' -U "${MSSQL_SA_USER:-SA}" -P "${MSSQL_SA_PASSWORD}" -S "${MSSQL_HOST}" -d identityiq -Q "set nocount on; ${QUERY}" 2>"${QUERY_ERR}")
+	else
+		FOUND=$(mysql -s -N -h"${MYSQL_HOST}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "${QUERY}" 2>"${QUERY_ERR}")
+	fi
+	if [[ $? -ne 0 ]]; then
+		# sqlcmd prints its errors on stdout
+		echo "=> FAILED: could not read the IIQ database version:" >&2
+		cat "${QUERY_ERR}" >&2
+		echo "${FOUND}" >&2
+		rm -f "${QUERY_ERR}"
+		exit 1
+	fi
+	rm -f "${QUERY_ERR}"
+	read -r FOUND_SCHEMA FOUND_SYSTEM <<< "${FOUND}"
+
+	if [[ "${FOUND_SCHEMA}" != "${EXPECTED_SCHEMA}" ]] || [[ "${FOUND_SYSTEM}" != "${EXPECTED_SYSTEM}" ]]; then
+		echo "=> FAILED: the existing IIQ database doesn't match this build of IIQ ${IIQ_VERSION}${IIQ_PATCH:+p${IIQ_PATCH}}" >&2
+		echo "     schema version: database ${FOUND_SCHEMA:-<none>}, expected ${EXPECTED_SCHEMA}" >&2
+		echo "     system version: database ${FOUND_SYSTEM:-<none>}, expected ${EXPECTED_SYSTEM}" >&2
+		echo "   The database is probably left over from an earlier run of the stack." >&2
+		echo "   To start fresh, delete it with 'docker compose down -v' and start the stack again." >&2
+		exit 1
+	fi
+	echo "=> Database version ${FOUND_SCHEMA} / ${FOUND_SYSTEM} matches this build"
 }
 
 awaitDatabase() {
@@ -249,6 +333,10 @@ then
 		SSB_DB=mssql
 	fi
 
+	if [[ ! -e /tmp/iiq-new-database ]]; then
+		checkDatabaseVersion "${SSB_DB}"
+	fi
+
 	# Custom tables from the SSB's db folder, converted for this database. Only
 	# on a new database, since the scripts' inserts aren't safe to repeat.
 	# The WAR's own iiq.properties still has the SSB's JDBC URL, which says what
@@ -257,6 +345,8 @@ then
 		SSB_URL=$(unzip -p /opt/iiq/identityiq.war WEB-INF/classes/iiq.properties | tr -d '\r' | grep -E '^[[:space:]]*dataSource\.url[[:space:]]*=' | tail -1 | cut -d= -f2-)
 		python3 /ssb-db-scripts.py --db "${SSB_DB}" --source-url "${SSB_URL}" /opt/iiq/db
 	fi
+
+	widenDescriptionColumns "${SSB_DB}"
 
 	if [ -z "${SKIP_DEMO_IMPORT}" ]
 	then
